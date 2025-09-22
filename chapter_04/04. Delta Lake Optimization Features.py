@@ -1,14 +1,23 @@
 # Databricks notebook source
-spark.sql("drop table if exists tb_people_2")
+# MAGIC %md
+# MAGIC # Low Cardinality Filters
+
+# COMMAND ----------
+
+# spark.sql("drop table if exists tb_people_2")
+# spark.sql("drop table if exists tb_people_2_partitioned")
+
+# COMMAND ----------
+
 df = spark.read.load('/databricks-datasets/learning-spark-v2/people/people-10m.delta')
-df.repartition(10000).write.saveAsTable('tb_people_2')
+df.write.option('maxRecordsPerFile', 1000).saveAsTable('tb_people_2')
 
 # COMMAND ----------
 
 spark.sql("""
     DESCRIBE HISTORY tb_people_2
 """).select(
-    'operationMetrics.numFiles'
+    'operationMetrics'
     ).show(truncate=False)
 
 # COMMAND ----------
@@ -19,7 +28,41 @@ spark.sql("""
 
 # COMMAND ----------
 
-# MAGIC %sql describe history tb_people_2
+# MAGIC %md
+# MAGIC ### Table Partitioning
+
+# COMMAND ----------
+
+(
+    df.write
+      .option('maxRecordsPerFile', 1000)
+      .partitionBy("gender")
+      .saveAsTable('tb_people_2_partitioned')
+)
+
+# COMMAND ----------
+
+spark.sql("""
+    DESCRIBE HISTORY tb_people_2_partitioned
+""").select(
+    'operationMetrics'
+    ).show(truncate=False)
+
+# COMMAND ----------
+
+spark.sql("""
+    DESCRIBE DETAIL tb_people_2_partitioned
+""").select(
+    'partitionColumns'
+    ).show(truncate=False)
+
+# COMMAND ----------
+
+spark.sql("""
+    SELECT COUNT(*) amount 
+    FROM tb_people_2_partitioned 
+    WHERE gender = 'F'
+""").show()
 
 # COMMAND ----------
 
