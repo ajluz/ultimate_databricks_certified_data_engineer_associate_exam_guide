@@ -1,15 +1,12 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC ### Low Cardinality Filters
+# MAGIC ### Handling Low Cardinality Filters
 
 # COMMAND ----------
 
-# MAGIC %sql USE workspace.default;
-
-# COMMAND ----------
-
-spark.sql("drop table if exists tb_people_2")
+# spark.sql("drop table if exists tb_people_2")
 # spark.sql("drop table if exists tb_people_2_partitioned")
+# spark.sql("drop table if exists tb_people_3")
 
 # COMMAND ----------
 
@@ -19,23 +16,10 @@ df.write.option('maxRecordsPerFile', 1000).saveAsTable('default.tb_people_2')
 # COMMAND ----------
 
 spark.sql("""
-    DESCRIBE HISTORY tb_people_2
-""").select(
-    'operationMetrics'
-    ).show(truncate=False)
-
-# COMMAND ----------
-
-spark.sql("""
     SELECT COUNT(*) AS amount
     FROM tb_people_2
     WHERE gender = 'F'
 """).show()
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### Table Partitioning
 
 # COMMAND ----------
 
@@ -65,14 +49,6 @@ spark.sql("""
 # COMMAND ----------
 
 spark.sql("""
-    SELECT count(*) AS amount
-    FROM tb_people_2
-    WHERE salary BETWEEN 110000 AND 145000
-""").show()
-
-# COMMAND ----------
-
-spark.sql("""
     SELECT count(*) amount
     FROM tb_people_2_partitioned
     WHERE salary BETWEEN 110000 AND 145000
@@ -81,7 +57,15 @@ spark.sql("""
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### OPTIMIZE
+# MAGIC ### Handling Small Files Problem
+
+# COMMAND ----------
+
+spark.sql("""
+    DESCRIBE HISTORY tb_people_2
+""").select(
+    'operationMetrics'
+    ).show(truncate=False)
 
 # COMMAND ----------
 
@@ -121,7 +105,7 @@ spark.sql("""
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### High Cardinality Filters
+# MAGIC ### Handling High Cardinality Filters
 
 # COMMAND ----------
 
@@ -143,7 +127,31 @@ spark.sql("""
 # COMMAND ----------
 
 spark.sql("""
-    SELECT *
+    SELECT id, firstName, gender, ssn, salary
     FROM tb_people_2
     WHERE id IN (99999)
 """).show()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Liquid Clustering
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC drop table if exists default.tb_people_3
+
+# COMMAND ----------
+
+# MAGIC %sql 
+# MAGIC CREATE TABLE tb_people_3
+# MAGIC   CLUSTER BY (gender, salary, id)
+# MAGIC TBLPROPERTIES ('delta.targetFileSize' = 2097152)
+# MAGIC AS 
+# MAGIC   SELECT * FROM tb_people_2
+
+# COMMAND ----------
+
+df = spark.read.load('/databricks-datasets/learning-spark-v2/people/people-10m.delta')
+df.write.option('maxRecordsPerFile', 1000).clusterBy("gender", "salary", "id").saveAsTable('default.tb_people_3')
