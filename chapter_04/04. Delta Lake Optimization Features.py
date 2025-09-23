@@ -4,9 +4,13 @@
 
 # COMMAND ----------
 
-# spark.sql("drop table if exists tb_people_2")
-# spark.sql("drop table if exists tb_people_2_partitioned")
-# spark.sql("drop table if exists tb_people_3")
+# MAGIC %sql USE workspace.default;
+
+# COMMAND ----------
+
+spark.sql("drop table if exists tb_people_2")
+spark.sql("drop table if exists tb_people_2_partitioned")
+spark.sql("drop table if exists tb_people_3")
 
 # COMMAND ----------
 
@@ -49,7 +53,7 @@ spark.sql("""
 # COMMAND ----------
 
 spark.sql("""
-    SELECT count(*) amount
+    SELECT count(*) AS amount
     FROM tb_people_2_partitioned
     WHERE salary BETWEEN 110000 AND 145000
 """).show()
@@ -139,19 +143,26 @@ spark.sql("""
 
 # COMMAND ----------
 
-# MAGIC %sql
-# MAGIC drop table if exists default.tb_people_3
+spark.sql("""
+    ALTER TABLE tb_people_2
+    CLUSTER BY (gender, salary, id)
+""")
+
+spark.sql("""
+    OPTIMIZE tb_people_2 FULL
+""")
+
+spark.sql("""
+    DESCRIBE DETAIL tb_people_2
+""").select(
+    "clusteringColumns"
+).show()
+
 
 # COMMAND ----------
 
-# MAGIC %sql 
-# MAGIC CREATE TABLE tb_people_3
-# MAGIC   CLUSTER BY (gender, salary, id)
-# MAGIC TBLPROPERTIES ('delta.targetFileSize' = 2097152)
-# MAGIC AS 
-# MAGIC   SELECT * FROM tb_people_2
-
-# COMMAND ----------
-
-df = spark.read.load('/databricks-datasets/learning-spark-v2/people/people-10m.delta')
-df.write.option('maxRecordsPerFile', 1000).clusterBy("gender", "salary", "id").saveAsTable('default.tb_people_3')
+spark.sql("""
+    SELECT id, firstName, gender, ssn, salary
+    FROM tb_people_2
+    WHERE id IN (99999)
+""").show()
