@@ -157,4 +157,3 @@ spark.sql("""
 """).select(
     "clusteringColumns"
 ).show()
-
