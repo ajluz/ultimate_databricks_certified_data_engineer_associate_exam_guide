@@ -6,6 +6,7 @@
 bundle.lock
 .bundle/
 *.dbc
+databricks.yml
 
 # Databricks notebooks (never commit these)
 *.ipynb
@@ -60,3 +61,4 @@ htmlcov/
 # Personal
 # =========================
 00_personal_scripts/
+.databricks
