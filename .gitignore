@@ -7,6 +7,7 @@ bundle.lock
 .bundle/
 *.dbc
 databricks.yml
+typings/
 
 # Databricks notebooks (never commit these)
 *.ipynb
@@ -23,7 +24,7 @@ __pycache__/
 .eggs/
 dist/
 build/
-.venv/
+.venv-1/
 venv/
 ENV/
 .env
