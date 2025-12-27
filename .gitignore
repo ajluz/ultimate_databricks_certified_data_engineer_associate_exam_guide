@@ -1,0 +1,62 @@
+# =========================
+# Databricks
+# =========================
+.databricks/
+.databrickscfg
+bundle.lock
+.bundle/
+*.dbc
+
+# Databricks notebooks (never commit these)
+*.ipynb
+.ipynb_checkpoints/
+
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+ENV/
+.env
+
+# =========================
+# Testing / coverage
+# =========================
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# =========================
+# macOS
+# =========================
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# =========================
+# IDEs / Editors
+# =========================
+.vscode/
+.idea/
+*.iml
+
+# =========================
+# Logs / temp
+# =========================
+*.log
+*.tmp
+*.swp
+
+# =========================
+# Personal
+# =========================
+.00_personal_scripts/
