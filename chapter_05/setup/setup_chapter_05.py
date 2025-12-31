@@ -4,6 +4,7 @@
 # MAGIC import dbldatagen as dg
 # MAGIC from pyspark.sql import functions as F, types as T
 # MAGIC from pyspark.sql.window import Window
+# MAGIC import os
 # MAGIC
 # MAGIC def drop_volume(chapter_number: str):
 # MAGIC     spark.sql(f"drop volume if exists workspace.default.chapter_{chapter_number}")
@@ -13,6 +14,19 @@
 # MAGIC         create volume if not exists workspace.default.chapter_{chapter_number}
 # MAGIC         comment 'Datasets for chapter {chapter_number}'
 # MAGIC     """)
+# MAGIC
+# MAGIC def write_text_file(chapter_number: str):
+# MAGIC     log_dir = f"/Volumes/workspace/default/chapter_{chapter_number}/log/text/"
+# MAGIC     log_path = f"{log_dir}/log_01.txt"
+# MAGIC     os.makedirs(log_dir, exist_ok=True)
+# MAGIC     
+# MAGIC     with open(log_path, "w") as f:
+# MAGIC         f.write("2025-12-30 09:00:01 INFO  Application started\n")
+# MAGIC         f.write("2025-12-30 09:00:02 INFO  Reading input file: customers.csv\n")
+# MAGIC         f.write("2025-12-30 09:00:04 INFO  Records read: 1,250\n")
+# MAGIC         f.write("2025-12-30 09:00:05 INFO  Transforming data\n")
+# MAGIC         f.write("2025-12-30 09:00:07 INFO  Writing output file: customers_clean.csv\n")
+# MAGIC         f.write("2025-12-30 09:00:08 INFO  Process completed successfully\n")
 # MAGIC
 # MAGIC def create_enumerated_files(temp_path: str, table_name: str, file_format: str):
 # MAGIC     data_files = [f for f in dbutils.fs.ls(temp_path) if f.name.startswith("part-")]
@@ -76,6 +90,12 @@
 # MAGIC     seed_pickers: int = 505,
 # MAGIC     ):
 # MAGIC
+# MAGIC     drop_volume(chapter_number)
+# MAGIC     create_volume(chapter_number)
+# MAGIC     main_temp_path = f"/Volumes/workspace/default/chapter_{chapter_number}/temp"
+# MAGIC
+# MAGIC     write_text_file(chapter_number)
+# MAGIC
 # MAGIC     countries = [
 # MAGIC         ("US","United States"), ("BR","Brazil"), ("IN","India"), ("GB","United Kingdom"),
 # MAGIC         ("DE","Germany"), ("FR","France"), ("ES","Spain"), ("CA","Canada"),
@@ -109,10 +129,6 @@
 # MAGIC
 # MAGIC     invalid_count = int(orders_n * orphan_rate)
 # MAGIC     invalid_user_id = users_n + 9999
-# MAGIC
-# MAGIC     drop_volume(chapter_number)
-# MAGIC     create_volume(chapter_number)
-# MAGIC     main_temp_path = f"/Volumes/workspace/default/chapter_{chapter_number}/temp"
 # MAGIC
 # MAGIC     gen_users = (
 # MAGIC         dg.DataGenerator(spark, name="users_gen", rows=users_n, partitions=4, randomSeedMethod="hash_fieldname")
