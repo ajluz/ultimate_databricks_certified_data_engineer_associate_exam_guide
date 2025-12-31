@@ -15,6 +15,13 @@
 # MAGIC         comment 'Datasets for chapter {chapter_number}'
 # MAGIC     """)
 # MAGIC
+# MAGIC def copy_binary_file_to_volume(chapter_number: str):
+# MAGIC     notebook_path = dbutils.notebook.entry_point.getDbutils().notebook().getContext().notebookPath().get()
+# MAGIC     workspace_root = "/Workspace" + notebook_path.rsplit("/", 2)[0]
+# MAGIC     source_file = f"{workspace_root}/00_data_files/db_diagram.png"
+# MAGIC     target_path = f"/Volumes/workspace/default/chapter_{chapter_number}/binary/db_diagram.png"
+# MAGIC     dbutils.fs.cp(source_file, target_path, recurse=False)
+# MAGIC
 # MAGIC def write_text_file(chapter_number: str):
 # MAGIC     log_dir = f"/Volumes/workspace/default/chapter_{chapter_number}/log/text/"
 # MAGIC     log_path = f"{log_dir}/log_01.txt"
@@ -95,6 +102,7 @@
 # MAGIC     main_temp_path = f"/Volumes/workspace/default/chapter_{chapter_number}/temp"
 # MAGIC
 # MAGIC     write_text_file(chapter_number)
+# MAGIC     copy_binary_file_to_volume(chapter_number)
 # MAGIC
 # MAGIC     countries = [
 # MAGIC         ("US","United States"), ("BR","Brazil"), ("IN","India"), ("GB","United Kingdom"),
@@ -113,6 +121,7 @@
 # MAGIC         'Data Heroes Mentorship Program',
 # MAGIC         'Book Club - Spark the Definitive Guide',
 # MAGIC         'Book Club - Delta Lake the Definitive Guide'
+# MAGIC         
 # MAGIC     ]
 # MAGIC     course_prices = [99.00, 297.00, 997.00, 297.00, 297.00]
 # MAGIC
@@ -274,6 +283,10 @@
 # MAGIC     create_enumerated_files(f"{main_temp_path}/order_details_dict/json/", "order_details_dict", "json")
 # MAGIC
 # MAGIC     dbutils.fs.rm(main_temp_path, True)
+
+# COMMAND ----------
+
+
 
 # COMMAND ----------
 

@@ -67,5 +67,24 @@ spark.sql("SELECT * FROM text.`/Volumes/workspace/default/chapter_05/products/cs
 
 # COMMAND ----------
 
-source_path = "file:././00_data_files/00_data_files/db_diagram.png"
-display(spark.read.format("binaryFile").load(source_path))
+spark.sql("SELECT * FROM binaryFile.`/Volumes/workspace/default/chapter_05/binary/db_diagram.png`").display()
+
+# COMMAND ----------
+
+# JDBC + Postgres
+# spark.sql("""
+#     CREATE OR REPLACE TEMPORARY VIEW products_jdbc
+#     USING JDBC
+#         OPTIONS (
+#             url "jdbc:postgresql://hostname:5432/database",
+#             dbtable "products",
+#             user "username",
+#             password "password"
+#     )
+# """)
+
+# spark.sql("SELECT * FROM products_jdbc")
+
+# COMMAND ----------
+
+
