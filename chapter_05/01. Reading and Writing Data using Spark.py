@@ -3,6 +3,10 @@
 
 # COMMAND ----------
 
+generate_and_write_to_volume(chapter_number="05")
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC # Reading and Writing Data Using Spark
 
@@ -308,7 +312,7 @@ spark.sql("""
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC #### Cloning tables
+# MAGIC #### Cloning Tables Using CLONE Statement
 
 # COMMAND ----------
 
@@ -357,3 +361,7 @@ spark.sql("SELECT * FROM users WHERE user_id = 8").show(truncate=False)
 
 print("\nResult for shallow_clone_users table:")
 spark.sql("SELECT * FROM shallow_clone_users WHERE user_id = 8").show(truncate=False)
+
+# COMMAND ----------
+
+drop_cloned_tables()

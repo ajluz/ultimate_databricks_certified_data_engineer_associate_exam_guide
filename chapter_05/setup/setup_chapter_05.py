@@ -6,6 +6,10 @@
 # MAGIC from pyspark.sql.window import Window
 # MAGIC import os
 # MAGIC
+# MAGIC def drop_cloned_tables():
+# MAGIC     spark.sql("DROP TABLE IF EXISTS deep_clone_users")
+# MAGIC     spark.sql("DROP TABLE IF EXISTS shallow_clone_users")
+# MAGIC
 # MAGIC def cleanup():
 # MAGIC     tables = [
 # MAGIC         "workspace.default.users",
@@ -15,6 +19,14 @@
 # MAGIC     ]
 # MAGIC     for table in tables:
 # MAGIC         spark.sql(f"DROP TABLE IF EXISTS {table}")
+# MAGIC
+# MAGIC def create_join_example_tables():
+# MAGIC     spark.sql("CREATE TABLE IF NOT EXISTS orders_example AS SELECT * FROM orders WHERE order_id IN (258,47,438)")
+# MAGIC     spark.sql("CREATE TABLE IF NOT EXISTS users_example AS SELECT * FROM users WHERE user_id IN (4,12)")
+# MAGIC
+# MAGIC def drop_join_example_tables():
+# MAGIC     spark.sql("DROP TABLE IF EXISTS orders_example")
+# MAGIC     spark.sql("DROP TABLE IF EXISTS users_example")
 # MAGIC
 # MAGIC def drop_volume(chapter_number: str):
 # MAGIC     spark.sql(f"drop volume if exists workspace.default.chapter_{chapter_number}")
@@ -302,7 +314,3 @@
 # MAGIC     create_enumerated_files(f"{main_temp_path}/order_details_dict/json/", "order_details_dict", "json")
 # MAGIC
 # MAGIC     dbutils.fs.rm(main_temp_path, True)
-
-# COMMAND ----------
-
-generate_and_write_to_volume(chapter_number="05")
