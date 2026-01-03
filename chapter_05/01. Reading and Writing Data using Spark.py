@@ -74,7 +74,7 @@ spark.sql("SELECT * FROM text.`/Volumes/workspace/default/chapter_05/products/cs
 
 # COMMAND ----------
 
-spark.sql("SELECT * FROM binaryFile.`/Volumes/workspace/default/chapter_05/binary/db_diagram.png`").display()
+spark.sql("SELECT * FROM binaryFile.`/Volumes/workspace/default/chapter_05/binary/db_diagram.png`").show()
 
 # COMMAND ----------
 
@@ -99,19 +99,19 @@ spark.sql("SELECT * FROM binaryFile.`/Volumes/workspace/default/chapter_05/binar
 
 # COMMAND ----------
 
-print('starting')
-
-# COMMAND ----------
-
 def cleanup():
     tables = [
         "workspace.default.users",
         "workspace.default.orders",
         "workspace.default.order_details",
-        "workspace.default.products"
+        "workspace.default.products",
+        "workspace.default.products_external",
+        "workspace.default.users_external"
     ]
     for table in tables:
         spark.sql(f"DROP TABLE IF EXISTS {table}")
+
+    dbutils.fs.rm("abfss://dev@dataslightadlsgen2.dfs.core.windows.net/book/", recurse=True)
 
 cleanup()
 
@@ -119,6 +119,11 @@ cleanup()
 
 # MAGIC %md
 # MAGIC #### Writing to a Delta Table
+
+# COMMAND ----------
+
+spark.sql("USE CATALOG workspace")
+spark.sql("USE SCHEMA default")
 
 # COMMAND ----------
 
@@ -236,4 +241,55 @@ spark.sql("DESCRIBE HISTORY products").select("version", "operation", "operation
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC #### Understanding External Tables
 
+# COMMAND ----------
+
+# Creating External Table
+spark.sql("""
+    CREATE TABLE IF NOT EXISTS users_external
+    LOCATION 'abfss://dev@dataslightadlsgen2.dfs.core.windows.net/book/certified_data_engieer/users' -- Adding location
+    AS 
+        SELECT * 
+        FROM parquet.`/Volumes/workspace/default/chapter_05/users/parquet/`
+""")
+
+spark.sql("SELECT * FROM users_external").show(5, truncate=False)
+
+# COMMAND ----------
+
+spark.sql("""
+    DESCRIBE EXTENDED users_external
+""").select("col_name", "data_type").filter("col_name IN ('Location', 'Type')").show(truncate=False)
+
+# COMMAND ----------
+
+spark.sql("DROP TABLE IF EXISTS users_external")
+
+display(dbutils.fs.ls("abfss://dev@dataslightadlsgen2.dfs.core.windows.net/book/certified_data_engieer/users"))
+
+# COMMAND ----------
+
+dbutils.fs.rm("abfss://dev@dataslightadlsgen2.dfs.core.windows.net/book/certified_data_engieer/users", True)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### Converting External to Managed Tables
+
+# COMMAND ----------
+
+spark.sql("""
+    CREATE TABLE IF NOT EXISTS products_external
+    LOCATION 'abfss://dev@dataslightadlsgen2.dfs.core.windows.net/book/certified_data_engieer/products' -- Adding location
+    AS 
+        SELECT * 
+        FROM parquet.`/Volumes/workspace/default/chapter_05/products/parquet/`
+""")
+
+spark.sql("SELECT * FROM products_external").show(5, truncate=False)
+
+# COMMAND ----------
+
+spark.sql("ALTER TABLE products_external SET MANAGED")
