@@ -261,7 +261,9 @@ spark.sql("SELECT * FROM users_external").show(5, truncate=False)
 
 spark.sql("""
     DESCRIBE EXTENDED users_external
-""").select("col_name", "data_type").filter("col_name IN ('Location', 'Type')").show(truncate=False)
+""").select("col_name", "data_type") \
+    .filter("col_name IN ('Location', 'Type')") \
+    .show(truncate=False)
 
 # COMMAND ----------
 
@@ -292,4 +294,17 @@ spark.sql("SELECT * FROM products_external").show(5, truncate=False)
 
 # COMMAND ----------
 
+# Just on serverless or all purpose 17.0+
 spark.sql("ALTER TABLE products_external SET MANAGED")
+
+# COMMAND ----------
+
+spark.sql("""
+    DESCRIBE EXTENDED products_external
+""").select("col_name", "data_type") \
+    .filter("col_name IN ('Location', 'Type')") \
+    .show(truncate=False)
+
+# COMMAND ----------
+
+
