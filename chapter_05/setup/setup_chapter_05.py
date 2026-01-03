@@ -10,23 +10,32 @@
 # MAGIC     spark.sql(f"drop volume if exists workspace.default.chapter_{chapter_number}")
 # MAGIC
 # MAGIC def create_volume(chapter_number: str):
-# MAGIC     spark.sql(f"""
-# MAGIC         create volume if not exists workspace.default.chapter_{chapter_number}
-# MAGIC         comment 'Datasets for chapter {chapter_number}'
-# MAGIC     """)
+# MAGIC     spark.sql(f"create volume if not exists workspace.default.chapter_{chapter_number}")
 # MAGIC
 # MAGIC def copy_binary_file_to_volume(chapter_number: str):
-# MAGIC     notebook_path = dbutils.notebook.entry_point.getDbutils().notebook().getContext().notebookPath().get()
-# MAGIC     workspace_root = "/Workspace" + notebook_path.rsplit("/", 2)[0]
-# MAGIC     source_file = f"{workspace_root}/00_data_files/db_diagram.png"
+# MAGIC     repo_folder = "ultimate_databricks_certified_data_engineer_associate_exam_guide"
 # MAGIC     target_path = f"/Volumes/workspace/default/chapter_{chapter_number}/binary/db_diagram.png"
-# MAGIC     dbutils.fs.cp(source_file, target_path, recurse=False)
+# MAGIC     notebook_path = dbutils.notebook.entry_point.getDbutils().notebook().getContext().notebookPath().get()
+# MAGIC     path_parts = notebook_path.split("/")
+# MAGIC     repo_index = next((i for i, part in enumerate(path_parts) if part == repo_folder), None)
+# MAGIC     if repo_index is None:
+# MAGIC         raise ValueError(f"Repository folder '{repo_folder}' not found in notebook path: {notebook_path}")
+# MAGIC
+# MAGIC     workspace_root = "/Workspace/" + "/".join(path_parts[1:repo_index + 1])
+# MAGIC     try: 
+# MAGIC         # when using serverless compute
+# MAGIC         source_file = f"{workspace_root}/00_data_files/db_diagram.png"
+# MAGIC         dbutils.fs.cp(source_file, target_path, recurse=False)
+# MAGIC     except Exception as e:
+# MAGIC         # when using all purpose compute
+# MAGIC         source_file = f"file:{workspace_root}/00_data_files/db_diagram.png"
+# MAGIC         dbutils.fs.cp(source_file, target_path, recurse=False)
 # MAGIC
 # MAGIC def write_text_file(chapter_number: str):
 # MAGIC     log_dir = f"/Volumes/workspace/default/chapter_{chapter_number}/log/text/"
 # MAGIC     log_path = f"{log_dir}/log_01.txt"
 # MAGIC     os.makedirs(log_dir, exist_ok=True)
-# MAGIC     
+# MAGIC
 # MAGIC     with open(log_path, "w") as f:
 # MAGIC         f.write("2025-12-30 09:00:01 INFO  Application started\n")
 # MAGIC         f.write("2025-12-30 09:00:02 INFO  Reading input file: customers.csv\n")
@@ -283,10 +292,6 @@
 # MAGIC     create_enumerated_files(f"{main_temp_path}/order_details_dict/json/", "order_details_dict", "json")
 # MAGIC
 # MAGIC     dbutils.fs.rm(main_temp_path, True)
-
-# COMMAND ----------
-
-
 
 # COMMAND ----------
 
