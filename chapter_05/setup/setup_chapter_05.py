@@ -6,6 +6,16 @@
 # MAGIC from pyspark.sql.window import Window
 # MAGIC import os
 # MAGIC
+# MAGIC def cleanup():
+# MAGIC     tables = [
+# MAGIC         "workspace.default.users",
+# MAGIC         "workspace.default.orders",
+# MAGIC         "workspace.default.order_details",
+# MAGIC         "workspace.default.products"
+# MAGIC     ]
+# MAGIC     for table in tables:
+# MAGIC         spark.sql(f"DROP TABLE IF EXISTS {table}")
+# MAGIC
 # MAGIC def drop_volume(chapter_number: str):
 # MAGIC     spark.sql(f"drop volume if exists workspace.default.chapter_{chapter_number}")
 # MAGIC

@@ -33,3 +33,16 @@ spark.sql("VACUUM tb_people RETAIN 0 HOURS")
 # COMMAND ----------
 
 spark.sql("SELECT * FROM tb_people VERSION AS OF 1").show()
+
+# COMMAND ----------
+
+# MAGIC %md 
+# MAGIC #### Run next cells to cleanup env
+
+# COMMAND ----------
+
+# MAGIC %run "./setup/setup_chapter_04"
+
+# COMMAND ----------
+
+cleanup()
