@@ -8,7 +8,6 @@
 # spark.read.parquet("/Volumes/workspace/default/chapter_05/orders/parquet/").createOrReplaceTempView('orders')
 # spark.read.parquet("/Volumes/workspace/default/chapter_05/order_details/parquet/").createOrReplaceTempView('order_details')
 
-
 # COMMAND ----------
 
 # MAGIC %md
@@ -21,8 +20,18 @@
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC #### Reading Json Files
+
+# COMMAND ----------
+
 # JSON 
 spark.sql("SELECT * FROM json.`/Volumes/workspace/default/chapter_05/users/json/`").show(5)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### Reading Csv Files
 
 # COMMAND ----------
 
@@ -43,6 +52,11 @@ spark.sql("""
 """)
 
 spark.sql("SELECT * FROM products_csv").show(5, truncate=False)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### Reading Other File Types
 
 # COMMAND ----------
 
@@ -71,7 +85,7 @@ spark.sql("SELECT * FROM binaryFile.`/Volumes/workspace/default/chapter_05/binar
 
 # COMMAND ----------
 
-# JDBC + Postgres
+# JDBC
 # spark.sql("""
 #     CREATE OR REPLACE TEMPORARY VIEW products_jdbc
 #     USING JDBC
@@ -84,6 +98,48 @@ spark.sql("SELECT * FROM binaryFile.`/Volumes/workspace/default/chapter_05/binar
 # """)
 
 # spark.sql("SELECT * FROM products_jdbc")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### Creating Foreign Tables
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC SELECT 
+# MAGIC     CAST(product_id AS INT),
+# MAGIC     product_name,
+# MAGIC     CAST(base_price AS DOUBLE)
+# MAGIC FROM csv.`/Volumes/workspace/default/chapter_05/products/csv/`
+
+# COMMAND ----------
+
+spark.sql("""
+    CREATE TABLE IF NOT EXISTS foreign_products (
+        product_id INT,
+        product_name STRING,
+        base_price DOUBLE
+    )
+    USING CSV
+    OPTIONS (
+        path = '/Volumes/workspace/default/chapter_05/products/csv/',
+        header = 'true',
+        sep = ','
+    )
+""")
+
+# spark.sql("SELECT * FROM workspace.default.foreign_products").show(5, truncate=False)
+
+# COMMAND ----------
+
+def add_new_csv_file():
+    csv_dir = "/Volumes/workspace/default/chapter_05/products/csv"
+    csv_path = f"{csv_dir}/product_02.csv"
+    os.makedirs(csv_dir, exist_ok=True)
+    with open(csv_path, "w") as f:
+        f.write("product_id,product_name,base_price\n")
+        f.write("5,Book Club - Ultimate Databricks Certified Data Engineer Associate Exam Guide,297.0")
 
 # COMMAND ----------
 
