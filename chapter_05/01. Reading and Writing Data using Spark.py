@@ -206,6 +206,11 @@ spark.sql("SELECT * FROM products WHERE product_id = 6").show(truncate=False)
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC #### Overwriting Data within a Table
+
+# COMMAND ----------
+
 # overwriting data using INSERT OVERWRITE
 spark.sql("""
     INSERT OVERWRITE products
