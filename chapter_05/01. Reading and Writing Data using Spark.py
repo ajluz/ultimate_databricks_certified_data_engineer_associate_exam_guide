@@ -307,4 +307,53 @@ spark.sql("""
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC #### Cloning tables
 
+# COMMAND ----------
+
+# Deep Clone
+spark.sql("""
+    CREATE TABLE IF NOT EXISTS deep_clone_users
+    CLONE users
+""")
+
+spark.sql("SELECT * FROM deep_clone_users").show(5, truncate=False)
+
+# COMMAND ----------
+
+# Shallow Clone
+spark.sql("""
+    CREATE TABLE IF NOT EXISTS shallow_clone_users
+    SHALLOW CLONE users
+""")
+
+spark.sql("SELECT * FROM shallow_clone_users").show(5, truncate=False)
+
+# COMMAND ----------
+
+spark.sql("""
+    UPDATE shallow_clone_users 
+    SET profession = 'Data Engineer'
+    WHERE user_id = 4
+""")
+
+print("Result for users table:")
+spark.sql("SELECT * FROM users WHERE user_id = 4").show(truncate=False)
+
+print("\nResult for shallow_clone_users table:")
+spark.sql("SELECT * FROM shallow_clone_users WHERE user_id = 4").show(truncate=False)
+
+# COMMAND ----------
+
+spark.sql("""
+    UPDATE users 
+    SET profession = 'Developer'
+    WHERE user_id = 8
+""")
+
+print("Result for users table:")
+spark.sql("SELECT * FROM users WHERE user_id = 8").show(truncate=False)
+
+print("\nResult for shallow_clone_users table:")
+spark.sql("SELECT * FROM shallow_clone_users WHERE user_id = 8").show(truncate=False)
