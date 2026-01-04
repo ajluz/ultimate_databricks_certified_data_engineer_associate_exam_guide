@@ -103,21 +103,21 @@ spark.sql("SELECT * FROM binaryFile.`/Volumes/workspace/default/chapter_05/binar
 
 # COMMAND ----------
 
-def cleanup():
-    tables = [
-        "workspace.default.users",
-        "workspace.default.orders",
-        "workspace.default.order_details",
-        "workspace.default.products",
-        "workspace.default.products_external",
-        "workspace.default.users_external"
-    ]
-    for table in tables:
-        spark.sql(f"DROP TABLE IF EXISTS {table}")
+# def cleanup():
+#     tables = [
+#         "workspace.default.users",
+#         "workspace.default.orders",
+#         "workspace.default.order_details",
+#         "workspace.default.products",
+#         "workspace.default.products_external",
+#         "workspace.default.users_external"
+#     ]
+#     for table in tables:
+#         spark.sql(f"DROP TABLE IF EXISTS {table}")
 
-    dbutils.fs.rm("abfss://dev@dataslightadlsgen2.dfs.core.windows.net/book/", recurse=True)
+#     dbutils.fs.rm("abfss://dev@dataslightadlsgen2.dfs.core.windows.net/book/", recurse=True)
 
-cleanup()
+# cleanup()
 
 # COMMAND ----------
 
@@ -203,9 +203,9 @@ spark.sql("DESCRIBE DETAIL products").select("format").show()
 # COMMAND ----------
 
 spark.sql("""
-    INSERT INTO products (product_id, product_name, base_price) 
+    INSERT INTO products (product_id, product_name, base_price, category) 
     VALUES (
-        6, 'Book Club - Ultimate Databricks Certified Data Engineer Associate Exam Guide', 297.0
+        6, 'Book Club - Ultimate Databricks Certified Data Engineer Associate Exam Guide', 297.90, 'intermediate'
     )
 """)
 
@@ -250,34 +250,34 @@ spark.sql("DESCRIBE HISTORY products").select("version", "operation", "operation
 
 # COMMAND ----------
 
-# Creating External Table
-spark.sql("""
-    CREATE TABLE IF NOT EXISTS users_external
-    LOCATION 'abfss://dev@dataslightadlsgen2.dfs.core.windows.net/book/certified_data_engieer/users' -- Adding location
-    AS 
-        SELECT * 
-        FROM parquet.`/Volumes/workspace/default/chapter_05/users/parquet/`
-""")
+# # Creating External Table
+# spark.sql("""
+#     CREATE TABLE IF NOT EXISTS users_external
+#     LOCATION 'abfss://dev@dataslightadlsgen2.dfs.core.windows.net/book/certified_data_engieer/users' -- Adding location
+#     AS 
+#         SELECT * 
+#         FROM parquet.`/Volumes/workspace/default/chapter_05/users/parquet/`
+# """)
 
-spark.sql("SELECT * FROM users_external").show(5, truncate=False)
-
-# COMMAND ----------
-
-spark.sql("""
-    DESCRIBE EXTENDED users_external
-""").select("col_name", "data_type") \
-    .filter("col_name IN ('Location', 'Type')") \
-    .show(truncate=False)
+# spark.sql("SELECT * FROM users_external").show(5, truncate=False)
 
 # COMMAND ----------
 
-spark.sql("DROP TABLE IF EXISTS users_external")
-
-display(dbutils.fs.ls("abfss://dev@dataslightadlsgen2.dfs.core.windows.net/book/certified_data_engieer/users"))
+# spark.sql("""
+#     DESCRIBE EXTENDED users_external
+# """).select("col_name", "data_type") \
+#     .filter("col_name IN ('Location', 'Type')") \
+#     .show(truncate=False)
 
 # COMMAND ----------
 
-dbutils.fs.rm("abfss://dev@dataslightadlsgen2.dfs.core.windows.net/book/certified_data_engieer/users", True)
+# spark.sql("DROP TABLE IF EXISTS users_external")
+
+# display(dbutils.fs.ls("abfss://dev@dataslightadlsgen2.dfs.core.windows.net/book/certified_data_engieer/users"))
+
+# COMMAND ----------
+
+# dbutils.fs.rm("abfss://dev@dataslightadlsgen2.dfs.core.windows.net/book/certified_data_engieer/users", True)
 
 # COMMAND ----------
 
@@ -286,28 +286,28 @@ dbutils.fs.rm("abfss://dev@dataslightadlsgen2.dfs.core.windows.net/book/certifie
 
 # COMMAND ----------
 
-spark.sql("""
-    CREATE TABLE IF NOT EXISTS products_external
-    LOCATION 'abfss://dev@dataslightadlsgen2.dfs.core.windows.net/book/certified_data_engieer/products' -- Adding location
-    AS 
-        SELECT * 
-        FROM parquet.`/Volumes/workspace/default/chapter_05/products/parquet/`
-""")
+# spark.sql("""
+#     CREATE TABLE IF NOT EXISTS products_external
+#     LOCATION 'abfss://dev@dataslightadlsgen2.dfs.core.windows.net/book/certified_data_engieer/products' -- Adding location
+#     AS 
+#         SELECT * 
+#         FROM parquet.`/Volumes/workspace/default/chapter_05/products/parquet/`
+# """)
 
-spark.sql("SELECT * FROM products_external").show(5, truncate=False)
-
-# COMMAND ----------
-
-# Just on serverless or all purpose 17.0+
-spark.sql("ALTER TABLE products_external SET MANAGED")
+# spark.sql("SELECT * FROM products_external").show(5, truncate=False)
 
 # COMMAND ----------
 
-spark.sql("""
-    DESCRIBE EXTENDED products_external
-""").select("col_name", "data_type") \
-    .filter("col_name IN ('Location', 'Type')") \
-    .show(truncate=False)
+# # Just on serverless or all purpose 17.0+
+# spark.sql("ALTER TABLE products_external SET MANAGED")
+
+# COMMAND ----------
+
+# spark.sql("""
+#     DESCRIBE EXTENDED products_external
+# """).select("col_name", "data_type") \
+#     .filter("col_name IN ('Location', 'Type')") \
+#     .show(truncate=False)
 
 # COMMAND ----------
 
@@ -353,14 +353,14 @@ spark.sql("SELECT * FROM shallow_clone_users WHERE user_id = 4").show(truncate=F
 spark.sql("""
     UPDATE users 
     SET profession = 'Developer'
-    WHERE user_id = 8
+    WHERE user_id = 7
 """)
 
 print("Result for users table:")
-spark.sql("SELECT * FROM users WHERE user_id = 8").show(truncate=False)
+spark.sql("SELECT * FROM users WHERE user_id = 7").show(truncate=False)
 
 print("\nResult for shallow_clone_users table:")
-spark.sql("SELECT * FROM shallow_clone_users WHERE user_id = 8").show(truncate=False)
+spark.sql("SELECT * FROM shallow_clone_users WHERE user_id = 7").show(truncate=False)
 
 # COMMAND ----------
 

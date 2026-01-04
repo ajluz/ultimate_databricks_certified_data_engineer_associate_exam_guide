@@ -5,6 +5,15 @@
 # MAGIC from pyspark.sql import functions as F, types as T
 # MAGIC from pyspark.sql.window import Window
 # MAGIC import os
+# MAGIC import decimal
+# MAGIC
+# MAGIC def create_set_operators_example_tables():
+# MAGIC     spark.sql("CREATE TABLE IF NOT EXISTS countries_1 AS SELECT DISTINCT country, country_code FROM users WHERE country_code IN ('BR', 'US', 'IN')")
+# MAGIC     spark.sql("CREATE TABLE IF NOT EXISTS countries_2 AS SELECT DISTINCT country, country_code FROM users WHERE country_code IN ('BR', 'JP')")
+# MAGIC
+# MAGIC def drop_set_operators_example_tables():
+# MAGIC     spark.sql("DROP TABLE IF EXISTS countries_1")
+# MAGIC     spark.sql("DROP TABLE IF EXISTS countries_2")
 # MAGIC
 # MAGIC def drop_cloned_tables():
 # MAGIC     spark.sql("DROP TABLE IF EXISTS deep_clone_users")
@@ -19,6 +28,26 @@
 # MAGIC     ]
 # MAGIC     for table in tables:
 # MAGIC         spark.sql(f"DROP TABLE IF EXISTS {table}")
+# MAGIC
+# MAGIC def create_window_functions_example_tables():
+# MAGIC     spark.sql("""
+# MAGIC         CREATE TABLE IF NOT EXISTS revenue_by_category_and_quarter 
+# MAGIC         AS 
+# MAGIC             SELECT
+# MAGIC                 p.category AS category,
+# MAGIC                 YEAR(o.order_date) AS year,
+# MAGIC                 QUARTER(o.order_date) AS quarter,
+# MAGIC                 CAST(SUM(od.unit_price) AS DECIMAL(10,2)) AS revenue
+# MAGIC             FROM products p
+# MAGIC             JOIN order_details od ON p.product_id = od.product_id
+# MAGIC             JOIN orders o ON od.order_id = o.order_id
+# MAGIC             GROUP BY p.category, 
+# MAGIC                      YEAR(o.order_date), 
+# MAGIC                      QUARTER(o.order_date)
+# MAGIC     """)
+# MAGIC
+# MAGIC def drop_window_functions_example_tables():
+# MAGIC     spark.sql("DROP TABLE IF EXISTS revenue_by_category_and_quarter")
 # MAGIC
 # MAGIC def create_join_example_tables():
 # MAGIC     spark.sql("CREATE TABLE IF NOT EXISTS orders_example AS SELECT * FROM orders WHERE order_id IN (258,47,438)")
@@ -154,7 +183,21 @@
 # MAGIC         'Book Club - Delta Lake the Definitive Guide'
 # MAGIC         
 # MAGIC     ]
-# MAGIC     course_prices = [99.00, 297.00, 997.00, 297.00, 297.00]
+# MAGIC     course_prices = [
+# MAGIC         decimal.Decimal('99.90'), 
+# MAGIC         decimal.Decimal('247.90'), 
+# MAGIC         decimal.Decimal('997.90'), 
+# MAGIC         decimal.Decimal('297.90'), 
+# MAGIC         decimal.Decimal('297.90')
+# MAGIC     ]
+# MAGIC     
+# MAGIC     course_categories = [
+# MAGIC         "beginner",
+# MAGIC         "intermediate",
+# MAGIC         "advanced",
+# MAGIC         "intermediate",
+# MAGIC         "intermediate"
+# MAGIC     ]
 # MAGIC
 # MAGIC     email_providers = ['@gmail.com','@hotmail.com','@outlook.com']
 # MAGIC     email_distribution = [60, 25, 15]
@@ -192,8 +235,8 @@
 # MAGIC                        .select("user_id","email","gender","profession","country_code","country")
 # MAGIC
 # MAGIC     products_df = spark.createDataFrame(
-# MAGIC         list(zip(range(1, len(courses)+1), courses, course_prices)),
-# MAGIC         schema="product_id long, product_name string, base_price double"
+# MAGIC         list(zip(range(1, len(courses)+1), courses, course_prices, course_categories)),
+# MAGIC         schema="product_id long, product_name string, base_price decimal(10,2), category string"
 # MAGIC     )
 # MAGIC
 # MAGIC     day_offset_expr = f"cast(pmod(abs(xxhash64(id + 1, {seed_orders})), 365) as int)"

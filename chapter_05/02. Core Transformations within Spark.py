@@ -17,11 +17,11 @@ create_join_example_tables()
 
 # COMMAND ----------
 
+print("Result from orders_example table:")
 spark.sql("SELECT * FROM orders_example").show(truncate=False)
 
-# COMMAND ----------
-
-spark.sql("SELECT * FROM users_example).show(truncate=False)
+print("\nResult from users_example table:")
+spark.sql("SELECT * FROM users_example").show(truncate=False)
 
 # COMMAND ----------
 
@@ -273,3 +273,139 @@ spark.sql(f"""
     SELECT 'DATE_FORMAT (BR)',DATE_FORMAT('{date_var}', 'dd/MM/yyyy')
 """).show(truncate=False)
 
+
+# COMMAND ----------
+
+# NULL handling functions
+spark.sql(f"""
+    SELECT 'IFNULL',
+           CAST(IFNULL(NULL, 'fallback') AS STRING)
+    UNION ALL
+    SELECT 'COALESCE',
+           CAST(COALESCE(NULL, NULL, 'first_non_null') AS STRING)
+    UNION ALL
+    SELECT 'NULLIF',
+           CAST(NULLIF(10, 10) AS STRING)
+    UNION ALL
+    SELECT 'NVL',
+           CAST(NVL(NULL, 'default_value') AS STRING)
+    UNION ALL
+    SELECT 'NVL2',
+           CAST(NVL2(NULL, 'not_null_value', 'is_null_value') AS STRING)
+    UNION ALL
+    SELECT 'TRY_CAST',
+           CAST(TRY_CAST('abc' AS INT) AS STRING)
+""").show(truncate=False)
+
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Grouping and Aggregating Data
+
+# COMMAND ----------
+
+# aggregate data without grouping
+spark.sql("""
+    SELECT 
+        COUNT(*) AS rows_quatity,
+        COUNT(DISTINCT o.user_id) AS distinct_users, 
+        SUM(od.unit_price) AS total_amount,
+        AVG(od.unit_price) AS avg_price,
+        MAX(od.discount) AS max_discount,
+        MIN(o.order_date) AS min_order_date
+    FROM order_details AS od
+    JOIN orders AS o ON od.order_id = o.order_id
+""").show(truncate=False)
+
+# COMMAND ----------
+
+# aggregate data with grouping
+spark.sql("""
+    SELECT 
+        o.payment_method,
+        COUNT(*) AS rows_quatity,
+        COUNT(DISTINCT o.user_id) AS distinct_users, 
+        SUM(od.unit_price) AS total_amount,
+        AVG(od.unit_price) AS avg_price,
+        MAX(od.discount) AS max_discount,
+        MIN(o.order_date) AS min_order_date
+    FROM order_details AS od
+    JOIN orders AS o ON od.order_id = o.order_id
+    GROUP BY o.payment_method
+""").show(truncate=False)
+
+# COMMAND ----------
+
+# filtering after data aggregation
+spark.sql("""
+    SELECT 
+        o.payment_method,
+        COUNT(*) AS rows_quatity,
+        COUNT(DISTINCT o.user_id) AS distinct_users, 
+        SUM(od.unit_price) AS total_amount,
+        AVG(od.unit_price) AS avg_price,
+        MAX(od.discount) AS max_discount,
+        MIN(o.order_date) AS min_order_date
+    FROM order_details AS od
+    JOIN orders AS o ON od.order_id = o.order_id
+    GROUP BY o.payment_method
+    HAVING COUNT(DISTINCT o.user_id) > 100
+""").show(truncate=False)
+
+# COMMAND ----------
+
+# MAGIC %md 
+# MAGIC ### Combining Data with Set Operators
+
+# COMMAND ----------
+
+create_set_operators_example_tables()
+
+# COMMAND ----------
+
+print("Result from countries_1 table:")
+spark.sql("SELECT country_code, country FROM countries_1").show(truncate=False)
+
+print("\nResult from countries_2 table:")
+spark.sql("SELECT country_code, country FROM countries_2").show(truncate=False)
+
+# COMMAND ----------
+
+# Union All
+spark.sql("""
+    SELECT country_code, country FROM countries_1
+    UNION ALL
+    SELECT country_code, country FROM countries_2
+""").show(truncate=False)
+
+# COMMAND ----------
+
+# Union
+spark.sql("""
+    SELECT country_code, country FROM countries_1
+    UNION
+    SELECT country_code, country FROM countries_2
+""").show(truncate=False)
+
+# COMMAND ----------
+
+# Except
+spark.sql("""
+    SELECT country_code, country FROM countries_1
+    EXCEPT
+    SELECT country_code, country FROM countries_2
+""").show(truncate=False)
+
+# COMMAND ----------
+
+# Intersect
+spark.sql("""
+    SELECT country_code, country FROM countries_1
+    INTERSECT
+    SELECT country_code, country FROM countries_2
+""").show(truncate=False)
+
+# COMMAND ----------
+
+drop_set_operators_example_tables()
