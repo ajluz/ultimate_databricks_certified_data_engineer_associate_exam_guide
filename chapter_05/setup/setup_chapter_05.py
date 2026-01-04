@@ -8,8 +8,18 @@
 # MAGIC import decimal
 # MAGIC
 # MAGIC def create_set_operators_example_tables():
-# MAGIC     spark.sql("CREATE TABLE IF NOT EXISTS countries_1 AS SELECT DISTINCT country, country_code FROM users WHERE country_code IN ('BR', 'US', 'IN')")
-# MAGIC     spark.sql("CREATE TABLE IF NOT EXISTS countries_2 AS SELECT DISTINCT country, country_code FROM users WHERE country_code IN ('BR', 'JP')")
+# MAGIC     spark.sql("""
+# MAGIC         CREATE TABLE IF NOT EXISTS countries_1 
+# MAGIC         AS 
+# MAGIC             SELECT DISTINCT country, country_code 
+# MAGIC             FROM users WHERE country_code IN ('BR', 'US', 'IN')
+# MAGIC     """)
+# MAGIC     spark.sql("""
+# MAGIC         CREATE TABLE IF NOT EXISTS countries_2 
+# MAGIC         AS 
+# MAGIC             SELECT DISTINCT country, country_code 
+# MAGIC             FROM users WHERE country_code IN ('BR', 'JP')
+# MAGIC     """)
 # MAGIC
 # MAGIC def drop_set_operators_example_tables():
 # MAGIC     spark.sql("DROP TABLE IF EXISTS countries_1")
@@ -31,27 +41,35 @@
 # MAGIC
 # MAGIC def create_window_functions_example_tables():
 # MAGIC     spark.sql("""
-# MAGIC         CREATE TABLE IF NOT EXISTS revenue_by_category_and_quarter 
+# MAGIC         CREATE TABLE IF NOT EXISTS revenue_by_course_level_and_quarter 
 # MAGIC         AS 
 # MAGIC             SELECT
-# MAGIC                 p.category AS category,
+# MAGIC                 p.course_level,
 # MAGIC                 YEAR(o.order_date) AS year,
 # MAGIC                 QUARTER(o.order_date) AS quarter,
 # MAGIC                 CAST(SUM(od.unit_price) AS DECIMAL(10,2)) AS revenue
 # MAGIC             FROM products p
 # MAGIC             JOIN order_details od ON p.product_id = od.product_id
 # MAGIC             JOIN orders o ON od.order_id = o.order_id
-# MAGIC             GROUP BY p.category, 
+# MAGIC             GROUP BY p.course_level, 
 # MAGIC                      YEAR(o.order_date), 
 # MAGIC                      QUARTER(o.order_date)
 # MAGIC     """)
 # MAGIC
 # MAGIC def drop_window_functions_example_tables():
-# MAGIC     spark.sql("DROP TABLE IF EXISTS revenue_by_category_and_quarter")
+# MAGIC     spark.sql("DROP TABLE IF EXISTS revenue_by_course_level_and_quarter")
 # MAGIC
 # MAGIC def create_join_example_tables():
-# MAGIC     spark.sql("CREATE TABLE IF NOT EXISTS orders_example AS SELECT * FROM orders WHERE order_id IN (258,47,438)")
-# MAGIC     spark.sql("CREATE TABLE IF NOT EXISTS users_example AS SELECT * FROM users WHERE user_id IN (4,12)")
+# MAGIC     spark.sql("""
+# MAGIC         CREATE TABLE IF NOT EXISTS orders_example 
+# MAGIC         AS 
+# MAGIC             SELECT * FROM orders WHERE order_id IN (258,47,438)
+# MAGIC         """)
+# MAGIC     spark.sql("""
+# MAGIC         CREATE TABLE IF NOT EXISTS users_example 
+# MAGIC         AS 
+# MAGIC             SELECT * FROM users WHERE user_id IN (4,12)
+# MAGIC         """)
 # MAGIC
 # MAGIC def drop_join_example_tables():
 # MAGIC     spark.sql("DROP TABLE IF EXISTS orders_example")
@@ -214,20 +232,34 @@
 # MAGIC     invalid_user_id = users_n + 9999
 # MAGIC
 # MAGIC     gen_users = (
-# MAGIC         dg.DataGenerator(spark, name="users_gen", rows=users_n, partitions=4, randomSeedMethod="hash_fieldname")
+# MAGIC         dg.DataGenerator(
+# MAGIC             spark, name="users_gen", rows=users_n, partitions=4, randomSeedMethod="hash_fieldname"
+# MAGIC         )
 # MAGIC         .withIdOutput()
 # MAGIC         .withColumn("user_id", T.LongType(), expr="id + 1")
-# MAGIC         .withColumn("email_provider", T.StringType(), values=email_providers, weights=email_distribution, baseColumn=["user_id"])
+# MAGIC         .withColumn(
+# MAGIC             "email_provider", 
+# MAGIC             T.StringType(), values=email_providers, weights=email_distribution, baseColumn=["user_id"]
+# MAGIC         )
 # MAGIC         .withColumn(
 # MAGIC             "email", T.StringType(),
 # MAGIC             expr="concat('user_', lpad(cast(user_id as string), 6, '0'), email_provider)",
 # MAGIC             baseColumn=["user_id", "email_provider"]
 # MAGIC         )
-# MAGIC         .withColumn("gender", T.StringType(), values=gender, weights=gender_distribution, baseColumn=["user_id"],
-# MAGIC                     nullable=True, percentNulls=0.08)
-# MAGIC         .withColumn("profession", T.StringType(), values=user_professions, baseColumn=["user_id"],
-# MAGIC                     nullable=True, percentNulls=0.05)
-# MAGIC         .withColumn("country_code", T.StringType(), values=country_codes, weights=country_weights, baseColumn=["user_id"])
+# MAGIC         .withColumn(
+# MAGIC             "gender", 
+# MAGIC             T.StringType(), values=gender, weights=gender_distribution, baseColumn=["user_id"],
+# MAGIC             nullable=True, percentNulls=0.08
+# MAGIC         )
+# MAGIC         .withColumn(
+# MAGIC             "profession", 
+# MAGIC             T.StringType(), values=user_professions, baseColumn=["user_id"],
+# MAGIC             nullable=True, percentNulls=0.05)
+# MAGIC         .withColumn(
+# MAGIC             "country_code", 
+# MAGIC             T.StringType(), values=country_codes, weights=country_weights, 
+# MAGIC             baseColumn=["user_id"]
+# MAGIC         )
 # MAGIC     )
 # MAGIC     users_df = gen_users.build().select("user_id","email","gender","profession","country_code")
 # MAGIC     country_map = F.create_map([F.lit(x) for kv in countries for x in kv])
@@ -236,7 +268,7 @@
 # MAGIC
 # MAGIC     products_df = spark.createDataFrame(
 # MAGIC         list(zip(range(1, len(courses)+1), courses, course_prices, course_categories)),
-# MAGIC         schema="product_id long, product_name string, base_price decimal(10,2), category string"
+# MAGIC         schema="product_id long, product_name string, base_price decimal(10,2), level string"
 # MAGIC     )
 # MAGIC
 # MAGIC     day_offset_expr = f"cast(pmod(abs(xxhash64(id + 1, {seed_orders})), 365) as int)"

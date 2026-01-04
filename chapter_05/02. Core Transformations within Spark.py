@@ -9,6 +9,41 @@
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC ### Spark SQL Basics
+
+# COMMAND ----------
+
+# Using DISTINCT do distinguishing duplicated Rows
+spark.sql("SELECT DISTINCT product_id FROM order_details").show()
+
+# COMMAND ----------
+
+# Using CASE WHEN
+spark.sql("""
+    SELECT 
+        product_id,
+        product_name,
+        CASE 
+            WHEN product_name = 'Building a Data Lakehouse with SQL and DDP' THEN 'beginner'
+            WHEN product_name IN (
+                'Mastering SQL on Databricks',
+                'Book Club - Spark the Definitive Guide',
+                'Book Club - Delta Lake the Definitive Guide'
+            ) THEN 'intermediate'
+            ELSE 'advanced'
+        END AS course_level
+    FROM products
+""").show(truncate=False)
+
+# COMMAND ----------
+
+# Ordering Data
+spark.sql("SELECT * FROM products ORDER BY base_price DESC").show(truncate=False)
+          
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC ### Handling Relationships Between Tables
 
 # COMMAND ----------
