@@ -44,14 +44,14 @@
 # MAGIC         CREATE TABLE IF NOT EXISTS revenue_by_course_level_and_quarter 
 # MAGIC         AS 
 # MAGIC             SELECT
-# MAGIC                 p.course_level,
+# MAGIC                 p.level,
 # MAGIC                 YEAR(o.order_date) AS year,
 # MAGIC                 QUARTER(o.order_date) AS quarter,
 # MAGIC                 CAST(SUM(od.unit_price) AS DECIMAL(10,2)) AS revenue
 # MAGIC             FROM products p
 # MAGIC             JOIN order_details od ON p.product_id = od.product_id
 # MAGIC             JOIN orders o ON od.order_id = o.order_id
-# MAGIC             GROUP BY p.course_level, 
+# MAGIC             GROUP BY p.level, 
 # MAGIC                      YEAR(o.order_date), 
 # MAGIC                      QUARTER(o.order_date)
 # MAGIC     """)

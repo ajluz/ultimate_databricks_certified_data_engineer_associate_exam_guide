@@ -109,13 +109,13 @@ spark.sql("SELECT * FROM binaryFile.`/Volumes/workspace/default/chapter_05/binar
 #         "workspace.default.orders",
 #         "workspace.default.order_details",
 #         "workspace.default.products",
-#         "workspace.default.products_external",
-#         "workspace.default.users_external"
+#         # "workspace.default.products_external",
+#         # "workspace.default.users_external"
 #     ]
 #     for table in tables:
 #         spark.sql(f"DROP TABLE IF EXISTS {table}")
 
-#     dbutils.fs.rm("abfss://dev@dataslightadlsgen2.dfs.core.windows.net/book/", recurse=True)
+#     # dbutils.fs.rm("abfss://dev@dataslightadlsgen2.dfs.core.windows.net/book/", recurse=True)
 
 # cleanup()
 
@@ -203,7 +203,7 @@ spark.sql("DESCRIBE DETAIL products").select("format").show()
 # COMMAND ----------
 
 spark.sql("""
-    INSERT INTO products (product_id, product_name, base_price, course_level) 
+    INSERT INTO products (product_id, product_name, base_price, level) 
     VALUES (
         6, 'Book Club - Ultimate Databricks Certified Data Engineer Associate Exam Guide', 297.90, 'intermediate'
     )

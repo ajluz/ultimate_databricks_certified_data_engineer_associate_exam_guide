@@ -1,6 +1,6 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Core Transformations Within Spark
+# MAGIC # Essential Data Transformations with Spark SQL
 
 # COMMAND ----------
 
@@ -9,7 +9,7 @@
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Spark SQL Basics
+# MAGIC ### Spark SQL Essentials
 
 # COMMAND ----------
 
@@ -44,7 +44,7 @@ spark.sql("SELECT * FROM products ORDER BY base_price DESC").show(truncate=False
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Handling Relationships Between Tables
+# MAGIC ### Performing Joins Between Tables
 
 # COMMAND ----------
 

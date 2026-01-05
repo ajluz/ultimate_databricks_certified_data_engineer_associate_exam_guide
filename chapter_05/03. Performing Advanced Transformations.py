@@ -146,7 +146,7 @@ spark.sql("""
 # COMMAND ----------
 
 # MAGIC %md 
-# MAGIC ### Using QUALIFY Statement
+# MAGIC ### Working with the QUALIFY Statement
 
 # COMMAND ----------
 
