@@ -11,44 +11,29 @@
 # MAGIC     spark.sql("""
 # MAGIC         CREATE TABLE IF NOT EXISTS order_details_variant
 # MAGIC         AS
-# MAGIC             WITH cte AS (
-# MAGIC                 SELECT 
-# MAGIC                     order_id,
-# MAGIC                     explode(order_details) AS order_details_by_id
-# MAGIC                 FROM json.`/Volumes/workspace/default/chapter_05/order_details_dict/json`
-# MAGIC                 LIMIT 3
-# MAGIC             )
 # MAGIC             SELECT 
-# MAGIC                 order_id,
-# MAGIC                 TO_JSON(order_details_by_id) AS order_details_by_id_string,
-# MAGIC                 order_details_by_id AS order_details_by_id_struct
-# MAGIC             FROM cte
+# MAGIC                 2000 AS order_id,
+# MAGIC                 '{"discount":0.05,"product_id":5,"unit_price":283.0}' AS order_details_by_id_string
+# MAGIC             UNION ALL
+# MAGIC             SELECT 
+# MAGIC                 2001,
+# MAGIC                 '{"product_id": 50, "unit_price": 99.99, "discount": 0.15, "quantity": 2}'
+# MAGIC             UNION ALL
+# MAGIC             SELECT 
+# MAGIC                 2002,
+# MAGIC                 '{"product_name": "Advanced Python Course", "price": 149.99, "currency": "USD"}'
+# MAGIC             UNION ALL
+# MAGIC             SELECT 
+# MAGIC                 2003,
+# MAGIC                 '{"item": "Data Engineering Book", "cost": 59.99, "tax": 4.80, "shipping": 5.00, "total": 69.79}'
+# MAGIC             UNION ALL
+# MAGIC             SELECT 
+# MAGIC                 2004,
+# MAGIC                 '{"id": 123, "description": "Subscription", "monthly_fee": 29.99, "billing_cycle": "monthly", "auto_renew": true}'
 # MAGIC             UNION ALL 
 # MAGIC             SELECT 
-# MAGIC                 1000 AS order_id,
-# MAGIC                 '{"product_id": 1, ]' AS order_details_by_id_string,
-# MAGIC                 NULL AS order_details_by_id_struct
-# MAGIC             UNION ALL
-# MAGIC             -- Multiple different schemas in the same column
-# MAGIC             SELECT 
-# MAGIC                 2001 AS order_id,
-# MAGIC                 '{"product_id": 50, "unit_price": 99.99, "discount": 0.15, "quantity": 2}' AS order_details_by_id_string,
-# MAGIC                 NULL AS order_details_by_id_struct
-# MAGIC             UNION ALL
-# MAGIC             SELECT 
-# MAGIC                 2002 AS order_id,
-# MAGIC                 '{"product_name": "Advanced Python Course", "price": 149.99, "currency": "USD"}' AS order_details_by_id_string,
-# MAGIC                 NULL AS order_details_by_id_struct
-# MAGIC             UNION ALL
-# MAGIC             SELECT 
-# MAGIC                 2003 AS order_id,
-# MAGIC                 '{"item": "Data Engineering Book", "cost": 59.99, "tax": 4.80, "shipping": 5.00, "total": 69.79}' AS order_details_by_id_string,
-# MAGIC                 NULL AS order_details_by_id_struct
-# MAGIC             UNION ALL
-# MAGIC             SELECT 
-# MAGIC                 2004 AS order_id,
-# MAGIC                 '{"id": 123, "description": "Subscription", "monthly_fee": 29.99, "billing_cycle": "monthly", "auto_renew": true}' AS order_details_by_id_string,
-# MAGIC                 NULL AS order_details_by_id_struct
+# MAGIC                 2005,
+# MAGIC                 '{"product_id": 1, ]'
 # MAGIC     """)
 # MAGIC
 # MAGIC def drop_variant_example_tables():

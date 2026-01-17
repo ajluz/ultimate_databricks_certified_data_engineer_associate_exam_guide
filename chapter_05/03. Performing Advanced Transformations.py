@@ -261,6 +261,33 @@ spark.sql("""
 
 # COMMAND ----------
 
+# It's possible to use both syntax patterns to JOIN or filter data on WHERE clause
+spark.sql("""
+    SELECT 
+        order_id,
+        order_details_by_id_string:product_id AS product_id,
+        p.product_name,
+        order_details_by_id_string:unit_price AS unit_price,
+        order_details_by_id_string:discount AS discount
+    FROM order_details_json AS od
+    JOIN products AS p ON od.order_details_by_id_string:product_id = p.product_id
+    LIMIT 5
+""").show(5, truncate=False)
+
+spark.sql("""
+    SELECT 
+        order_id,
+        order_details_by_id_struct.product_id AS product_id,
+        p.product_name,
+        order_details_by_id_struct.unit_price AS unit_price,
+        order_details_by_id_struct.discount AS discount
+    FROM order_details_json AS od
+    JOIN products AS p ON od.order_details_by_id_struct.product_id = p.product_id
+    LIMIT 5
+""").show(5, truncate=False)
+
+# COMMAND ----------
+
 # DBTITLE 1,Cell 26
 # converting json string column to struct data type using FROM_JSON
 schema_from_column = 'STRUCT<product_id: BIGINT, unit_price: DOUBLE, discount: DOUBLE>'
@@ -280,10 +307,9 @@ spark.sql(f"""
 
 # It's possible to use SCHEMA_OF_JSON_AGG function to define a common schema from all records of the dataset dinamically
 schema_from_column = spark.sql("""
-    SELECT DISTINCT 
+    SELECT
         SCHEMA_OF_JSON_AGG(order_details_by_id_string) AS schema_from_col
     FROM order_details_json
-    GROUP BY order_id
 """).collect()[0]['schema_from_col']
 
 print(f'schema from column [order_details_by_id_string]:"{schema_from_column}"\n')
@@ -336,41 +362,117 @@ drop_json_example_tables()
 
 # COMMAND ----------
 
-drop_variant_example_tables()
 create_variant_example_tables()
 
 # COMMAND ----------
 
-spark.sql("SELECT * FROM order_details_variant").show(truncate=False)
+spark.sql("SELECT * FROM order_details_variant ORDER BY order_id").display()
 
 # COMMAND ----------
 
-# Using TRY_PARSE_JSON function to convert a json string column to variant data type
-df = spark.sql("""
+# Using SCHEMA_OF_JSON_AGG function to define a common schema from all records of the dataset dinamically
+schema_from_column = spark.sql("""
     SELECT 
-        order_id,
-        (order_details_by_id_string) AS order_details_by_id_variant
+        SCHEMA_OF_JSON_AGG(order_details_by_id_string) AS schema_from_col
     FROM order_details_variant
-""")
+""").collect()[0]['schema_from_col']
 
-df.printSchema()
+print(f'schema from column [order_details_by_id_string]:"{schema_from_column}"\n')
 
-df.show(5, truncate=False)
-
-# COMMAND ----------
-
-# Using PARSE_JSON + TO_JSON function to convert a struct field column to variant data type
-df = spark.sql("""
+# Since we have multiples schemas in the same column define a struct field would mess up the schema
+spark.sql(f"""
     SELECT 
         order_id,
-        PARSE_JSON(TO_JSON(order_details_by_id_struct)) AS order_details_by_id_variant
-    FROM order_details_json
-""")
-
-df.printSchema()
-
-df.show(5, truncate=False)
+        FROM_JSON(
+            order_details_by_id_string, 
+            '{schema_from_column}'
+        ) AS order_details_by_id_struct
+    FROM order_details_variant
+    ORDER BY order_id
+""").display()
 
 # COMMAND ----------
 
-drop_json_example_tables()
+# It's possible to use PARSE_JSON function to convert a json string column to variant data type
+spark.sql("""
+    CREATE OR REPLACE TEMPORARY VIEW vw_order_details_variant AS
+    SELECT 
+        order_id,
+        PARSE_JSON(order_details_by_id_string) AS order_details_by_id_variant
+    FROM order_details_variant
+    WHERE order_id != 2005
+    ORDER BY order_id
+""")
+
+spark.sql("SELECT * FROM vw_order_details_variant").printSchema()
+
+spark.sql("SELECT * FROM vw_order_details_variant").show(5, truncate=False)
+
+# COMMAND ----------
+
+# It's possible to use : syntax in queries to access subfields in variant field
+# It will get just the rows that contains the path being accessed
+# It's possible to cast the datatype when accessed using :: syntax
+spark.sql("""
+    SELECT 
+        order_id, 
+        order_details_by_id_variant:product_id::INT AS product_id,
+        order_details_by_id_variant:unit_price::DOUBLE AS unit_price,
+        order_details_by_id_variant:discount::DOUBLE AS discount,
+        order_details_by_id_variant:auto_renew::STRING AS auto_renew,
+        order_details_by_id_variant:currency::STRING AS currency
+    FROM order_details_variant
+    ORDER BY order_id
+""").display()
+
+# COMMAND ----------
+
+# Use schema_of_variant function to return the schema for each row within the column
+spark.sql("""
+    SELECT 
+        schema_of_variant(order_details_by_id_variant) variant_row_schema
+    FROM order_details_variant
+""").show(truncate=False)
+
+# COMMAND ----------
+
+# Use schema_of_variant_agg function to return common schema for all rows within the dataset
+spark.sql("""
+    SELECT 
+        schema_of_variant_agg(order_details_by_id_variant) variant_common_schema
+    FROM order_details_variant
+""").collect()[0]['variant_common_schema']
+
+# COMMAND ----------
+
+# It's possible to use TRY_PARSE_JSON function to handle columns with broken json strings
+# the order_id 2005 has a broken json string. It will return NULL for that row
+spark.sql("""
+    WITH variant_cte AS (
+        SELECT 
+            order_id,
+            order_details_by_id_string,
+            TRY_PARSE_JSON(order_details_by_id_string) AS order_details_by_id_variant
+        FROM order_details_variant
+        WHERE order_id = 2005
+        ORDER BY order_id
+    )
+    SELECT 
+        order_id,
+        order_details_by_id_string,
+        order_details_by_id_variant
+    FROM variant_cte
+""").show(truncate=False)
+
+# COMMAND ----------
+
+drop_variant_example_tables()
+
+# COMMAND ----------
+
+# MAGIC %md 
+# MAGIC ### Working With PIVOT, UNPIVOT and Grouping Sets
+
+# COMMAND ----------
+
+
