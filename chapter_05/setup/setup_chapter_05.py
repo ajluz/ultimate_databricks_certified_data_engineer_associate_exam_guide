@@ -7,6 +7,52 @@
 # MAGIC import os
 # MAGIC import decimal
 # MAGIC
+# MAGIC def create_variant_example_tables():
+# MAGIC     spark.sql("""
+# MAGIC         CREATE TABLE IF NOT EXISTS order_details_variant
+# MAGIC         AS
+# MAGIC             WITH cte AS (
+# MAGIC                 SELECT 
+# MAGIC                     order_id,
+# MAGIC                     explode(order_details) AS order_details_by_id
+# MAGIC                 FROM json.`/Volumes/workspace/default/chapter_05/order_details_dict/json`
+# MAGIC                 LIMIT 3
+# MAGIC             )
+# MAGIC             SELECT 
+# MAGIC                 order_id,
+# MAGIC                 TO_JSON(order_details_by_id) AS order_details_by_id_string,
+# MAGIC                 order_details_by_id AS order_details_by_id_struct
+# MAGIC             FROM cte
+# MAGIC             UNION ALL 
+# MAGIC             SELECT 
+# MAGIC                 1000 AS order_id,
+# MAGIC                 '{"product_id": 1, ]' AS order_details_by_id_string,
+# MAGIC                 NULL AS order_details_by_id_struct
+# MAGIC     """)
+# MAGIC
+# MAGIC def drop_variant_example_tables():
+# MAGIC     spark.sql("DROP TABLE IF EXISTS order_details_variant")
+# MAGIC
+# MAGIC def create_json_example_tables():
+# MAGIC     spark.sql("""
+# MAGIC         CREATE TABLE IF NOT EXISTS order_details_json 
+# MAGIC         AS
+# MAGIC             WITH cte AS (
+# MAGIC                 SELECT 
+# MAGIC                     order_id,
+# MAGIC                     explode(order_details) AS order_details_by_id
+# MAGIC                 FROM json.`/Volumes/workspace/default/chapter_05/order_details_dict/json`
+# MAGIC             )
+# MAGIC             SELECT 
+# MAGIC                 order_id,
+# MAGIC                 TO_JSON(order_details_by_id) AS order_details_by_id_string,
+# MAGIC                 order_details_by_id AS order_details_by_id_struct
+# MAGIC             FROM cte
+# MAGIC     """)
+# MAGIC
+# MAGIC def drop_json_example_tables():
+# MAGIC     spark.sql("DROP TABLE IF EXISTS order_details_json")
+# MAGIC
 # MAGIC def create_set_operators_example_tables():
 # MAGIC     spark.sql("""
 # MAGIC         CREATE TABLE IF NOT EXISTS countries_1 
@@ -131,8 +177,8 @@
 # MAGIC     order_details_dict = (
 # MAGIC         df.groupBy("order_id")
 # MAGIC           .agg(F.collect_list(F.struct(
-# MAGIC                 F.col("product_id").alias("productid"),
-# MAGIC                 F.col("unit_price").alias("unitprice"),
+# MAGIC                 F.col("product_id").alias("product_id"),
+# MAGIC                 F.col("unit_price").alias("unit_price"),
 # MAGIC                 F.col("discount").alias("discount")
 # MAGIC           )).alias("order_details"))
 # MAGIC     )

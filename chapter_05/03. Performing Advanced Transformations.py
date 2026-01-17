@@ -224,3 +224,153 @@ spark.sql("""
 
 # MAGIC %md 
 # MAGIC ### Working With JSON Nested Data
+
+# COMMAND ----------
+
+create_json_example_tables()
+
+# COMMAND ----------
+
+# order_details_by_id_string is a string column with JSON content
+# order_details_by_id_struct is a column with struct datatype
+spark.sql("SELECT * FROM order_details_json LIMIT 5").display()
+
+# COMMAND ----------
+
+# It's possible to use : syntax in queries to access subfields in JSON strings
+spark.sql("""
+    SELECT 
+        order_id,
+        order_details_by_id_string:product_id AS product_id,
+        order_details_by_id_string:unit_price AS unit_price,
+        order_details_by_id_string:discount AS discount 
+    FROM order_details_json
+""").show(5, truncate=False)
+
+# COMMAND ----------
+
+# It's possible to use . syntax in queries to access subfields within a struct column
+spark.sql("""
+    SELECT 
+        order_id,
+        order_details_by_id_struct.product_id AS product_id,
+        order_details_by_id_struct.unit_price AS unit_price,
+        order_details_by_id_struct.discount AS discount 
+    FROM order_details_json
+""").show(5, truncate=False)
+
+# COMMAND ----------
+
+# DBTITLE 1,Cell 26
+# converting json string column to struct data type using FROM_JSON
+schema_from_column = 'STRUCT<product_id: BIGINT, unit_price: DOUBLE, discount: DOUBLE>'
+
+spark.sql(f"""
+    SELECT 
+        order_id,
+        FROM_JSON(
+            order_details_by_id_string, 
+            '{schema_from_column}'
+        ) AS order_details_by_id_struct
+    FROM order_details_json
+    LIMIT 5
+""").display()
+
+# COMMAND ----------
+
+# It's possible to use SCHEMA_OF_JSON_AGG function to define a common schema from all records of the dataset dinamically
+schema_from_column = spark.sql("""
+    SELECT DISTINCT 
+        SCHEMA_OF_JSON_AGG(order_details_by_id_string) AS schema_from_col
+    FROM order_details_json
+    GROUP BY order_id
+""").collect()[0]['schema_from_col']
+
+print(f'schema from column [order_details_by_id_string]:"{schema_from_column}"\n')
+
+spark.sql(f"""
+    SELECT 
+        order_id,
+        FROM_JSON(
+            order_details_by_id_string, 
+            '{schema_from_column}'
+        ) AS order_details_by_id_struct
+    FROM order_details_json
+    LIMIT 5
+""").display()
+
+# COMMAND ----------
+
+# converting a column with struct data type to JSON string using TO_JSON
+spark.sql(f"""
+    SELECT 
+        order_id,
+        TO_JSON(order_details_by_id_struct) AS order_details_by_id_string
+    FROM order_details_json
+    LIMIT 5
+""").display()
+
+# COMMAND ----------
+
+# using NAMED_STRUCT function to create a single struct column from multiple columns
+spark.sql(f"""
+    SELECT 
+        order_id,
+        NAMED_STRUCT(
+            'product_id', product_id, 
+            'unit_price', unit_price,
+            'discount', discount
+        ) AS order_details_by_id_struct
+    FROM order_details
+    LIMIT 5
+""").display()
+
+# COMMAND ----------
+
+drop_json_example_tables()
+
+# COMMAND ----------
+
+# MAGIC %md 
+# MAGIC ### Working With VARIANT Data Type
+
+# COMMAND ----------
+
+drop_variant_example_tables()
+create_variant_example_tables()
+
+# COMMAND ----------
+
+spark.sql("SELECT * FROM order_details_variant").show(truncate=False)
+
+# COMMAND ----------
+
+# Using TRY_PARSE_JSON function to convert a json string column to variant data type
+df = spark.sql("""
+    SELECT 
+        order_id,
+        (order_details_by_id_string) AS order_details_by_id_variant
+    FROM order_details_variant
+""")
+
+df.printSchema()
+
+df.show(5, truncate=False)
+
+# COMMAND ----------
+
+# Using PARSE_JSON + TO_JSON function to convert a struct field column to variant data type
+df = spark.sql("""
+    SELECT 
+        order_id,
+        PARSE_JSON(TO_JSON(order_details_by_id_struct)) AS order_details_by_id_variant
+    FROM order_details_json
+""")
+
+df.printSchema()
+
+df.show(5, truncate=False)
+
+# COMMAND ----------
+
+drop_json_example_tables()
