@@ -475,4 +475,153 @@ drop_variant_example_tables()
 
 # COMMAND ----------
 
+create_pivot_example_tables()
 
+# COMMAND ----------
+
+spark.sql("SELECT * FROM pivot_example").show(5, truncate=False)
+
+# COMMAND ----------
+
+# Using PIVOT on Spark SQL 
+spark.sql("""
+    SELECT *
+    FROM ( 
+        SELECT year_month, level, qty 
+        FROM pivot_example
+    ) AS q 
+    PIVOT(
+        SUM(qty) 
+        FOR level
+            IN ('beginner','intermediate','advanced')
+    )
+    ORDER BY year_month
+""").show(truncate=False)
+
+# COMMAND ----------
+
+# Creating a dynamic pivot query 
+df = spark.sql("SELECT DISTINCT level FROM pivot_example")
+levels = [row["level"] for row in df.select("level").collect()]
+pivot_columns = ", ".join([f"'{level}'" for level in levels])
+
+pivot_query = f"""
+SELECT *
+FROM ( 
+    SELECT year_month, level, qty 
+    FROM pivot_example
+) AS q 
+PIVOT(
+    SUM(qty) 
+    FOR level
+        IN ({pivot_columns})
+)
+ORDER BY year_month
+"""
+
+print(f"pivot_columns are: ({pivot_columns})\n")
+
+print(f"dinamic pivot query is: \n{pivot_query}\n")
+
+spark.sql(pivot_query).show(truncate=False)
+
+# COMMAND ----------
+
+create_unpivot_example_tables()
+
+# COMMAND ----------
+
+spark.sql("SELECT * FROM unpivot_example").show(5, truncate=False)
+
+# COMMAND ----------
+
+# Using UNPIVOT on Spark SQL
+spark.sql("""
+    SELECT year_month, level, qty 
+    FROM unpivot_example
+    UNPIVOT(
+    qty FOR level 
+        IN(advanced, beginner, intermediate)
+    ) AS unpvt
+    ORDER BY year_month, level
+""").show(10, truncate=False)
+
+# COMMAND ----------
+
+drop_pivot_example_tables()
+drop_unpivot_example_tables()
+
+# COMMAND ----------
+
+create_grouping_sets_example_tables()
+
+# COMMAND ----------
+
+# Using UNION ALL to handle multiple group by clauses
+spark.sql("""
+    SELECT 
+        -- group by all
+        NULL AS level,
+        NULL AS year_month,
+        SUM(qty) AS qty 
+    FROM grouping_sets_example
+    UNION ALL 
+    SELECT 
+        -- group by level
+        level,
+        NULL AS year_month,
+        SUM(qty) AS qty 
+    FROM grouping_sets_example
+    GROUP BY level
+    UNION ALL 
+    SELECT 
+        -- group by level and year_month
+        level,
+        year_month,
+        SUM(qty) AS qty 
+    FROM grouping_sets_example
+    GROUP BY level, year_month
+    ORDER BY year_month, level
+""").show(10)
+
+# COMMAND ----------
+
+# Using GROUPING SETS to handle multiple group by clauses
+spark.sql("""
+    SELECT level, year_month, SUM(qty) AS qty 
+    FROM grouping_sets_example
+    GROUP BY 
+        GROUPING SETS (
+            (), -- group by all 
+            (level), -- group by level
+            (level, year_month) -- group by level and year_month
+        )
+    ORDER BY year_month, level
+""").show(10)
+
+# COMMAND ----------
+
+# Using ROLLUP 
+spark.sql("""
+    SELECT level, year_month, SUM(qty) AS qty 
+    FROM grouping_sets_example
+    GROUP BY ROLLUP (level, year_month)
+    ORDER BY year_month, level
+""").show(10)
+
+# COMMAND ----------
+
+# Using CUBE
+spark.sql("""
+    SELECT 
+        level,
+        year_month,
+        SUM(qty) AS qty 
+    FROM grouping_sets_example
+    GROUP BY CUBE (level, year_month)
+    ORDER BY year_month, level
+""").show(10)
+
+# COMMAND ----------
+
+drop_grouping_sets_example_tables()

@@ -7,6 +7,66 @@
 # MAGIC import os
 # MAGIC import decimal
 # MAGIC
+# MAGIC def create_pivot_example_tables():
+# MAGIC     spark.sql("""
+# MAGIC         CREATE TABLE IF NOT EXISTS pivot_example 
+# MAGIC         AS
+# MAGIC             SELECT
+# MAGIC                 date_format(o.order_date, 'yyyy/MM') AS year_month,
+# MAGIC                 p.level,
+# MAGIC                 COUNT(*) AS qty
+# MAGIC             FROM products AS p
+# MAGIC             INNER JOIN order_details AS od ON p.product_id=od.product_id
+# MAGIC             INNER JOIN orders AS o ON od.order_id=o.order_id
+# MAGIC             GROUP BY date_format(o.order_date, 'yyyy/MM'),
+# MAGIC                     p.level
+# MAGIC             ORDER BY year_month,
+# MAGIC                     p.level
+# MAGIC     """)
+# MAGIC
+# MAGIC def drop_pivot_example_tables():
+# MAGIC     spark.sql("DROP TABLE IF EXISTS pivot_example")
+# MAGIC
+# MAGIC def create_unpivot_example_tables():
+# MAGIC     spark.sql("""
+# MAGIC         CREATE TABLE IF NOT EXISTS unpivot_example 
+# MAGIC         AS
+# MAGIC             SELECT *
+# MAGIC             FROM ( 
+# MAGIC                 SELECT year_month, level, qty 
+# MAGIC                 FROM pivot_example
+# MAGIC             ) AS q 
+# MAGIC             PIVOT(
+# MAGIC                 SUM(qty) 
+# MAGIC                 FOR level
+# MAGIC                     IN ('beginner','intermediate','advanced')
+# MAGIC             )
+# MAGIC             ORDER BY year_month
+# MAGIC     """)
+# MAGIC
+# MAGIC def drop_unpivot_example_tables():
+# MAGIC     spark.sql("DROP TABLE IF EXISTS unpivot_example")
+# MAGIC
+# MAGIC def create_grouping_sets_example_tables():
+# MAGIC     spark.sql("""
+# MAGIC         CREATE TABLE IF NOT EXISTS grouping_sets_example 
+# MAGIC         AS
+# MAGIC             SELECT
+# MAGIC                 date_format(o.order_date, 'yyyy/MM') AS year_month,
+# MAGIC                 p.level,
+# MAGIC                 COUNT(*) AS qty
+# MAGIC             FROM products AS p
+# MAGIC             INNER JOIN order_details AS od ON p.product_id=od.product_id
+# MAGIC             INNER JOIN orders AS o ON od.order_id=o.order_id
+# MAGIC             GROUP BY date_format(o.order_date, 'yyyy/MM'),
+# MAGIC                     p.level
+# MAGIC             ORDER BY year_month,
+# MAGIC                     p.level
+# MAGIC     """)
+# MAGIC
+# MAGIC def drop_grouping_sets_example_tables():
+# MAGIC     spark.sql("DROP TABLE IF EXISTS grouping_sets_example")
+# MAGIC
 # MAGIC def create_variant_example_tables():
 # MAGIC     spark.sql("""
 # MAGIC         CREATE TABLE IF NOT EXISTS order_details_variant
