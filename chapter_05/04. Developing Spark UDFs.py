@@ -22,3 +22,8 @@ spark.sql("""
         calculate_discount(unit_price, discount) AS discounted_price
     FROM order_details
 """).show(5, truncate=False)
+
+# COMMAND ----------
+
+# Dropping UDF using Spark SQL
+spark.sql("DROP FUNCTION calculate_discount")
