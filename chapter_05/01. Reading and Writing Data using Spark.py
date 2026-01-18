@@ -108,18 +108,18 @@ spark.sql("""
 # COMMAND ----------
 
 # Reading database Data using JDBC
-spark.sql("""
-    CREATE OR REPLACE TEMPORARY VIEW products_jdbc
-    USING JDBC
-        OPTIONS (
-            url "jdbc:postgresql://hostname:5432/database",
-            dbtable "products",
-            user "username",
-            password "password"
-    )
-""")
+# spark.sql("""
+#     CREATE OR REPLACE TEMPORARY VIEW products_jdbc
+#     USING JDBC
+#         OPTIONS (
+#             url "jdbc:postgresql://hostname:5432/database",
+#             dbtable "products",
+#             user "username",
+#             password "password"
+#     )
+# """)
 
-spark.sql("SELECT * FROM products_jdbc")
+# spark.sql("SELECT * FROM products_jdbc")
 
 # COMMAND ----------
 
@@ -146,8 +146,6 @@ spark.sql("""
         SELECT * 
         FROM parquet.`/Volumes/workspace/default/chapter_05/order_details/parquet/`
 """)
-
-# COMMAND ----------
 
 spark.sql("SELECT * FROM order_details").show(5, truncate=False)
 
@@ -181,8 +179,7 @@ spark.sql("""
 
 spark.sql("""
     CREATE TABLE IF NOT EXISTS orders
-    AS 
-        SELECT * FROM vw_orders
+    AS SELECT * FROM vw_orders
 """)
 
 spark.sql("SELECT * FROM orders").show(5, truncate=False)
@@ -261,9 +258,10 @@ spark.sql("DESCRIBE HISTORY products") \
 # COMMAND ----------
 
 # Creating External Table
+# This command will not work as-is on Databricks free edition
 spark.sql("""
     CREATE TABLE IF NOT EXISTS users_external
-    LOCATION 'abfss://dev@dataslightadlsgen2.dfs.core.windows.net/book/certified_data_engieer/users' -- Adding location
+    LOCATION 'external/location/path/users' -- replace it for the external path
     AS 
         SELECT * 
         FROM parquet.`/Volumes/workspace/default/chapter_05/users/parquet/`
@@ -274,6 +272,7 @@ spark.sql("SELECT * FROM users_external").show(5, truncate=False)
 # COMMAND ----------
 
 # Describing External Table
+# This command will not work as-is on Databricks free edition
 spark.sql("""
     DESCRIBE EXTENDED users_external
 """).select("col_name", "data_type") \
@@ -283,13 +282,17 @@ spark.sql("""
 # COMMAND ----------
 
 # After execute a DROP command for a External Table the files will keep on Storage Location
+# This command will not work as-is on Databricks free edition
 spark.sql("DROP TABLE IF EXISTS users_external")
 
-display(dbutils.fs.ls("abfss://dev@dataslightadlsgen2.dfs.core.windows.net/book/certified_data_engieer/users"))
+display(
+    dbutils.fs.ls("external/location/path/users")
+)
 
 # COMMAND ----------
 
-dbutils.fs.rm("abfss://dev@dataslightadlsgen2.dfs.core.windows.net/book/certified_data_engieer/users", True)
+# This command will not work as-is on Databricks free edition
+dbutils.fs.rm("external/location/path/users", True)
 
 # COMMAND ----------
 
@@ -298,28 +301,32 @@ dbutils.fs.rm("abfss://dev@dataslightadlsgen2.dfs.core.windows.net/book/certifie
 
 # COMMAND ----------
 
-# spark.sql("""
-#     CREATE TABLE IF NOT EXISTS products_external
-#     LOCATION 'abfss://dev@dataslightadlsgen2.dfs.core.windows.net/book/certified_data_engieer/products' -- Adding location
-#     AS 
-#         SELECT * 
-#         FROM parquet.`/Volumes/workspace/default/chapter_05/products/parquet/`
-# """)
+# Creating a new external table to show case the ALTER TABLE ... SET MANAGED statement
+# This command will not work as-is on Databricks free edition
+spark.sql("""
+    CREATE TABLE IF NOT EXISTS products_example
+    LOCATION 'external/location/path/products_example'
+    AS 
+        SELECT * 
+        FROM parquet.`/Volumes/workspace/default/chapter_05/products/parquet/`
+""")
 
-# spark.sql("SELECT * FROM products_external").show(5, truncate=False)
-
-# COMMAND ----------
-
-# # Just on serverless or all purpose 17.0+
-# spark.sql("ALTER TABLE products_external SET MANAGED")
+spark.sql("SELECT * FROM products_example").show(5, truncate=False)
 
 # COMMAND ----------
 
-# spark.sql("""
-#     DESCRIBE EXTENDED products_external
-# """).select("col_name", "data_type") \
-#     .filter("col_name IN ('Location', 'Type')") \
-#     .show(truncate=False)
+# Just on serverless or all purpose 17.0+
+# This command will not work as-is on Databricks free edition
+spark.sql("ALTER TABLE products_example SET MANAGED")
+
+# COMMAND ----------
+
+# This command will not work as-is on Databricks free edition
+spark.sql("""
+    DESCRIBE EXTENDED products_example
+""").select("col_name", "data_type") \
+    .filter("col_name IN ('Type')") \
+    .show(truncate=False)
 
 # COMMAND ----------
 
