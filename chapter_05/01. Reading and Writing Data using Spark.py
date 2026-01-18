@@ -236,7 +236,9 @@ spark.sql("""
 
 spark.sql("SELECT COUNT(*) rows_qty FROM products").show(truncate=False)
 
-spark.sql("DESCRIBE HISTORY products").select("version", "operation", "operationParameters.mode").show(truncate=False)
+spark.sql("DESCRIBE HISTORY products") \
+     .select("version", "operation", "operationParameters.mode") \
+     .show(truncate=False)
 
 # COMMAND ----------
 
@@ -247,9 +249,9 @@ spark.sql("""
         SELECT * FROM avro.`/Volumes/workspace/default/chapter_05/products/avro/`
 """)
 
-spark.sql("SELECT COUNT(*) rows_qty FROM products").show(truncate=False)
-
-spark.sql("DESCRIBE HISTORY products").select("version", "operation", "operationParameters.mode").show(truncate=False)
+spark.sql("DESCRIBE HISTORY products") \
+     .select("version", "operation", "operationParameters.mode") \
+     .show(truncate=False)
 
 # COMMAND ----------
 
@@ -258,34 +260,36 @@ spark.sql("DESCRIBE HISTORY products").select("version", "operation", "operation
 
 # COMMAND ----------
 
-# # Creating External Table
-# spark.sql("""
-#     CREATE TABLE IF NOT EXISTS users_external
-#     LOCATION 'abfss://dev@dataslightadlsgen2.dfs.core.windows.net/book/certified_data_engieer/users' -- Adding location
-#     AS 
-#         SELECT * 
-#         FROM parquet.`/Volumes/workspace/default/chapter_05/users/parquet/`
-# """)
+# Creating External Table
+spark.sql("""
+    CREATE TABLE IF NOT EXISTS users_external
+    LOCATION 'abfss://dev@dataslightadlsgen2.dfs.core.windows.net/book/certified_data_engieer/users' -- Adding location
+    AS 
+        SELECT * 
+        FROM parquet.`/Volumes/workspace/default/chapter_05/users/parquet/`
+""")
 
-# spark.sql("SELECT * FROM users_external").show(5, truncate=False)
-
-# COMMAND ----------
-
-# spark.sql("""
-#     DESCRIBE EXTENDED users_external
-# """).select("col_name", "data_type") \
-#     .filter("col_name IN ('Location', 'Type')") \
-#     .show(truncate=False)
+spark.sql("SELECT * FROM users_external").show(5, truncate=False)
 
 # COMMAND ----------
 
-# spark.sql("DROP TABLE IF EXISTS users_external")
-
-# display(dbutils.fs.ls("abfss://dev@dataslightadlsgen2.dfs.core.windows.net/book/certified_data_engieer/users"))
+# Describing External Table
+spark.sql("""
+    DESCRIBE EXTENDED users_external
+""").select("col_name", "data_type") \
+    .filter("col_name IN ('Location', 'Type')") \
+    .show(truncate=False)
 
 # COMMAND ----------
 
-# dbutils.fs.rm("abfss://dev@dataslightadlsgen2.dfs.core.windows.net/book/certified_data_engieer/users", True)
+# After execute a DROP command for a External Table the files will keep on Storage Location
+spark.sql("DROP TABLE IF EXISTS users_external")
+
+display(dbutils.fs.ls("abfss://dev@dataslightadlsgen2.dfs.core.windows.net/book/certified_data_engieer/users"))
+
+# COMMAND ----------
+
+dbutils.fs.rm("abfss://dev@dataslightadlsgen2.dfs.core.windows.net/book/certified_data_engieer/users", True)
 
 # COMMAND ----------
 
