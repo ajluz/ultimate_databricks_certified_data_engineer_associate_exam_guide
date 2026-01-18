@@ -335,23 +335,23 @@ spark.sql("""
 
 # COMMAND ----------
 
-# Deep Clone
+# Creating a new table by using DEEP CLONE
 spark.sql("""
     CREATE TABLE IF NOT EXISTS deep_clone_users
-    CLONE users
+    DEEP CLONE users
 """)
 
-spark.sql("SELECT * FROM deep_clone_users").show(5, truncate=False)
+# spark.sql("SELECT * FROM deep_clone_users").show(5, truncate=False)
 
 # COMMAND ----------
 
-# Shallow Clone
+# Creating a new table by using SHALLOW CLONE
 spark.sql("""
     CREATE TABLE IF NOT EXISTS shallow_clone_users
     SHALLOW CLONE users
 """)
 
-spark.sql("SELECT * FROM shallow_clone_users").show(5, truncate=False)
+# spark.sql("SELECT * FROM shallow_clone_users").show(5, truncate=False)
 
 # COMMAND ----------
 
@@ -362,10 +362,18 @@ spark.sql("""
 """)
 
 print("Result for users table:")
-spark.sql("SELECT * FROM users WHERE user_id = 4").show(truncate=False)
+spark.sql("""
+    SELECT * 
+    FROM users 
+    WHERE user_id = 4
+""").show(truncate=False)
 
 print("\nResult for shallow_clone_users table:")
-spark.sql("SELECT * FROM shallow_clone_users WHERE user_id = 4").show(truncate=False)
+spark.sql("""
+    SELECT * 
+    FROM shallow_clone_users 
+    WHERE user_id = 4
+""").show(truncate=False)
 
 # COMMAND ----------
 
@@ -376,10 +384,18 @@ spark.sql("""
 """)
 
 print("Result for users table:")
-spark.sql("SELECT * FROM users WHERE user_id = 7").show(truncate=False)
+spark.sql("""
+    SELECT * 
+    FROM users 
+    WHERE user_id = 7
+""").show(truncate=False)
 
 print("\nResult for shallow_clone_users table:")
-spark.sql("SELECT * FROM shallow_clone_users WHERE user_id = 7").show(truncate=False)
+spark.sql("""
+    SELECT * 
+    FROM shallow_clone_users 
+    WHERE user_id = 7
+""").show(truncate=False)
 
 # COMMAND ----------
 

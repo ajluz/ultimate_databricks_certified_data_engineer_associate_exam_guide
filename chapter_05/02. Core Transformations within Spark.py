@@ -9,41 +9,6 @@
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Spark SQL Essentials
-
-# COMMAND ----------
-
-# Using DISTINCT do distinguishing duplicated Rows
-spark.sql("SELECT DISTINCT product_id FROM order_details").show()
-
-# COMMAND ----------
-
-# Using CASE WHEN
-spark.sql("""
-    SELECT 
-        product_id,
-        product_name,
-        CASE 
-            WHEN product_name = 'Building a Data Lakehouse with SQL and DDP' THEN 'beginner'
-            WHEN product_name IN (
-                'Mastering SQL on Databricks',
-                'Book Club - Spark the Definitive Guide',
-                'Book Club - Delta Lake the Definitive Guide'
-            ) THEN 'intermediate'
-            ELSE 'advanced'
-        END AS course_level
-    FROM products
-""").show(truncate=False)
-
-# COMMAND ----------
-
-# Ordering Data
-spark.sql("SELECT * FROM products ORDER BY base_price DESC").show(truncate=False)
-          
-
-# COMMAND ----------
-
-# MAGIC %md
 # MAGIC ### Performing Joins Between Tables
 
 # COMMAND ----------
@@ -60,51 +25,52 @@ spark.sql("SELECT * FROM users_example").show(truncate=False)
 
 # COMMAND ----------
 
-# Inner Join
+# Inner Join example
 spark.sql("""
     SELECT 
         u.email,
-        o.*
+        o.order_id,
+        o.order_date
     FROM users_example AS u
-    INNER JOIN orders_example AS o ON o.user_id = u.user_id -- could be JOIN 
+    INNER JOIN orders_example AS o ON o.user_id = u.user_id -- can be just JOIN 
 """).show(5, truncate=False)
 
 # COMMAND ----------
 
-# Left Join
+# Left Join example
 spark.sql("""
     SELECT 
         u.email,
         o.*
     FROM users_example AS u
-    LEFT OUTER JOIN orders_example AS o ON o.user_id = u.user_id -- could be LEFT JOIN
+    LEFT OUTER JOIN orders_example AS o ON o.user_id = u.user_id -- can be just LEFT JOIN
 """).show(truncate=False)
 
 # COMMAND ----------
 
-# Right Join
+# Right Join example
 spark.sql("""
     SELECT 
         u.email,
         o.*
     FROM users_example AS u
-    RIGHT OUTER JOIN orders_example AS o ON o.user_id = u.user_id -- could be RIGHT JOIN
+    RIGHT OUTER JOIN orders_example AS o ON o.user_id = u.user_id -- can be just RIGHT JOIN
 """).show(truncate=False)
 
 # COMMAND ----------
 
-# Full Join
+# Full Join example
 spark.sql("""
     SELECT 
         u.email,
         o.*
     FROM users_example AS u
-    FULL OUTER JOIN orders_example AS o ON o.user_id = u.user_id -- could be FULL JOIN
+    FULL OUTER JOIN orders_example AS o ON o.user_id = u.user_id -- can be just FULL JOIN
 """).show(truncate=False)
 
 # COMMAND ----------
 
-# Semi Join
+# Semi Join example
 spark.sql("""
     SELECT *
     FROM orders_example AS o 
@@ -113,7 +79,7 @@ spark.sql("""
 
 # COMMAND ----------
 
-# Anti Join
+# Anti Join example
 spark.sql("""
     SELECT *
     FROM orders_example AS o 
@@ -191,7 +157,10 @@ spark.sql("""
 
 # Using Like Any
 spark.sql("""
-    SELECT * 
+    SELECT 
+        country,
+        email,
+        profession 
     FROM users 
     WHERE profession LIKE ANY ('Data%', 'Dev%')
 """).show(5, truncate=False)
@@ -313,8 +282,8 @@ spark.sql(f"""
 
 # NULL handling functions
 spark.sql(f"""
-    SELECT 'IFNULL',
-           CAST(IFNULL(NULL, 'fallback') AS STRING)
+    SELECT 'IFNULL' AS function_name,
+           CAST(IFNULL(NULL, 'fallback') AS STRING) AS result
     UNION ALL
     SELECT 'COALESCE',
            CAST(COALESCE(NULL, NULL, 'first_non_null') AS STRING)
@@ -407,7 +376,7 @@ spark.sql("SELECT country_code, country FROM countries_2").show(truncate=False)
 
 # COMMAND ----------
 
-# Union All
+# Union All Example
 spark.sql("""
     SELECT country_code, country FROM countries_1
     UNION ALL
@@ -416,7 +385,7 @@ spark.sql("""
 
 # COMMAND ----------
 
-# Union
+# Union Example
 spark.sql("""
     SELECT country_code, country FROM countries_1
     UNION
@@ -425,7 +394,7 @@ spark.sql("""
 
 # COMMAND ----------
 
-# Except
+# Except Example
 spark.sql("""
     SELECT country_code, country FROM countries_1
     EXCEPT
@@ -434,7 +403,7 @@ spark.sql("""
 
 # COMMAND ----------
 
-# Intersect
+# Intersect Example
 spark.sql("""
     SELECT country_code, country FROM countries_1
     INTERSECT
