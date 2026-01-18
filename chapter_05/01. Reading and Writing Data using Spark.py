@@ -22,8 +22,11 @@ generate_and_write_to_volume(chapter_number="05")
 
 # COMMAND ----------
 
-# JSON 
-spark.sql("SELECT * FROM json.`/Volumes/workspace/default/chapter_05/users/json/`").show(5)
+# Reading JSON files
+spark.sql("""
+    SELECT * 
+    FROM json.`/Volumes/workspace/default/chapter_05/users/json/`
+""").show(5)
 
 # COMMAND ----------
 
@@ -32,23 +35,26 @@ spark.sql("SELECT * FROM json.`/Volumes/workspace/default/chapter_05/users/json/
 
 # COMMAND ----------
 
-# CSV without options 
-spark.sql("SELECT * FROM csv.`/Volumes/workspace/default/chapter_05/products/csv/`").show(5, truncate=False)
+# Reading CSV files without options 
+spark.sql("""
+    SELECT * 
+    FROM csv.`/Volumes/workspace/default/chapter_05/products/csv/`
+""").show(truncate=False)
 
 # COMMAND ----------
 
-# CSV with options 
+# Reading CSV files with options 
 spark.sql("""
-    CREATE OR REPLACE TEMPORARY VIEW products_csv
+    CREATE OR REPLACE TEMPORARY VIEW vw_products_csv
     USING CSV
     OPTIONS (
         path '/Volumes/workspace/default/chapter_05/products/csv/',
         header 'true',
         sep ','
-)
+    )
 """)
 
-spark.sql("SELECT * FROM products_csv").show(5, truncate=False)
+spark.sql("SELECT * FROM vw_products_csv").show(truncate=False)
 
 # COMMAND ----------
 
@@ -57,67 +63,68 @@ spark.sql("SELECT * FROM products_csv").show(5, truncate=False)
 
 # COMMAND ----------
 
-# parquet
-spark.sql("SELECT * FROM parquet.`/Volumes/workspace/default/chapter_05/orders/parquet/`").show(5)
+print("Reading PARQUET files:")
+spark.sql("""
+    SELECT * 
+    FROM parquet.`/Volumes/workspace/default/chapter_05/orders/parquet/`
+""").show(2)
 
-# orc
-spark.sql("SELECT * FROM orc.`/Volumes/workspace/default/chapter_05/orders/orc/`").show(5)
+print("\nReading ORC files:")
+spark.sql("""
+    SELECT * 
+    FROM orc.`/Volumes/workspace/default/chapter_05/orders/orc/`
+""").show(2)
 
-# avro
-spark.sql("SELECT * FROM avro.`/Volumes/workspace/default/chapter_05/orders/avro/`").show(5)
-
-# COMMAND ----------
-
-# text
-spark.sql("SELECT * FROM text.`/Volumes/workspace/default/chapter_05/log/text/`").show(5, truncate=False)
-
-# COMMAND ----------
-
-# text
-spark.sql("SELECT * FROM text.`/Volumes/workspace/default/chapter_05/products/csv/`").show(5, truncate=False)
-
-# COMMAND ----------
-
-spark.sql("SELECT * FROM binaryFile.`/Volumes/workspace/default/chapter_05/binary/db_diagram.png`").show()
+print("\nReading AVRO files:")
+spark.sql("""
+    SELECT * 
+    FROM avro.`/Volumes/workspace/default/chapter_05/orders/avro/`
+""").show(2)
 
 # COMMAND ----------
 
-# JDBC
-# spark.sql("""
-#     CREATE OR REPLACE TEMPORARY VIEW products_jdbc
-#     USING JDBC
-#         OPTIONS (
-#             url "jdbc:postgresql://hostname:5432/database",
-#             dbtable "products",
-#             user "username",
-#             password "password"
-#     )
-# """)
+# Reading text log files 
+spark.sql("""
+    SELECT * 
+    FROM text.`/Volumes/workspace/default/chapter_05/log/text/`
+""").show(5, truncate=False)
 
-# spark.sql("SELECT * FROM products_jdbc")
+# COMMAND ----------
+
+# Discovering schema for csv files using text file format
+spark.sql("""
+    SELECT * 
+    FROM text.`/Volumes/workspace/default/chapter_05/products/csv/`
+""").show(truncate=False)
+
+# COMMAND ----------
+
+# Reading Binary file format
+spark.sql("""
+    SELECT * 
+    FROM binaryFile.`/Volumes/workspace/default/chapter_05/binary/db_diagram.png`
+""").show()
+
+# COMMAND ----------
+
+# Reading database Data using JDBC
+spark.sql("""
+    CREATE OR REPLACE TEMPORARY VIEW products_jdbc
+    USING JDBC
+        OPTIONS (
+            url "jdbc:postgresql://hostname:5432/database",
+            dbtable "products",
+            user "username",
+            password "password"
+    )
+""")
+
+spark.sql("SELECT * FROM products_jdbc")
 
 # COMMAND ----------
 
 # MAGIC %md
 # MAGIC ### Writing to a Table
-
-# COMMAND ----------
-
-# def cleanup():
-#     tables = [
-#         "workspace.default.users",
-#         "workspace.default.orders",
-#         "workspace.default.order_details",
-#         "workspace.default.products",
-#         # "workspace.default.products_external",
-#         # "workspace.default.users_external"
-#     ]
-#     for table in tables:
-#         spark.sql(f"DROP TABLE IF EXISTS {table}")
-
-#     # dbutils.fs.rm("abfss://dev@dataslightadlsgen2.dfs.core.windows.net/book/", recurse=True)
-
-# cleanup()
 
 # COMMAND ----------
 
@@ -202,6 +209,7 @@ spark.sql("DESCRIBE DETAIL products").select("format").show()
 
 # COMMAND ----------
 
+# Inserting data to a Iceberg table using SQL
 spark.sql("""
     INSERT INTO products (product_id, product_name, base_price, level) 
     VALUES (
@@ -211,7 +219,7 @@ spark.sql("""
 
 spark.sql("SELECT COUNT(*) rows_qty FROM products").show(truncate=False)
 
-spark.sql("SELECT * FROM products WHERE product_id = 6").show(truncate=False)
+spark.sql("SELECT * FROM products WHERE product_id = 6").show()
 
 # COMMAND ----------
 
