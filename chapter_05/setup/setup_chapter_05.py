@@ -77,15 +77,15 @@
 # MAGIC             UNION ALL
 # MAGIC             SELECT 
 # MAGIC                 2001,
-# MAGIC                 '{"product_id": 50, "unit_price": 99.99, "discount": 0.15, "quantity": 2}'
+# MAGIC                 '{"id": 50, "unit_price": 99.99, "discount": 0.15, "qty": 2}'
 # MAGIC             UNION ALL
 # MAGIC             SELECT 
 # MAGIC                 2002,
-# MAGIC                 '{"product_name": "Advanced Python Course", "price": 149.99, "currency": "USD"}'
+# MAGIC                 '{"name": "New Course 1", "price": 149.99, "currency": "USD"}'
 # MAGIC             UNION ALL
 # MAGIC             SELECT 
 # MAGIC                 2003,
-# MAGIC                 '{"item": "Data Engineering Book", "cost": 59.99, "tax": 4.80, "shipping": 5.00, "total": 69.79}'
+# MAGIC                 '{"item": "New Course 2", "cost": 59.99, "tax": 4.80, "shipping": 5.00, "total": 69.79}'
 # MAGIC             UNION ALL
 # MAGIC             SELECT 
 # MAGIC                 2004,

@@ -17,7 +17,29 @@ create_window_functions_example_tables()
 
 # COMMAND ----------
 
-# Over Explanation
+# Book - example for figure 5.5
+spark.sql("""
+    SELECT p.level, p.product_id, p.base_price AS unit_price,
+        SUM(p.base_price) OVER() AS `OVER`,
+        SUM(p.base_price) OVER (PARTITION BY p.level) AS `PARTITION BY`,
+        SUM(p.base_price) OVER (
+            PARTITION BY p.level 
+            ORDER BY p.base_price, p.product_id
+            ROWS BETWEEN UNBOUNDED PRECEDING 
+            AND CURRENT ROW
+        ) AS `ROWS BETWEEN`
+    FROM products AS p
+    ORDER BY 
+        CASE p.level
+            WHEN 'beginner' THEN 1
+            WHEN 'intermediate' THEN 2
+            WHEN 'advanced' THEN 3
+        END
+""").show(truncate=False)
+
+# COMMAND ----------
+
+# Over Order By Explanation
 spark.sql("""
     SELECT 
         level, 
@@ -49,9 +71,11 @@ spark.sql("""
     SUM(revenue) OVER (
       PARTITION BY level
       ORDER BY year, quarter
-      ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+      ROWS BETWEEN UNBOUNDED PRECEDING 
+        AND CURRENT ROW
     ) AS running_revenue
   FROM revenue_by_course_level_and_quarter
+  WHERE level = 'intermediate'
   ORDER BY level, year, quarter
 """).show(truncate=False)
 
@@ -75,9 +99,9 @@ spark.sql("""
     level, 
     product_name, 
     base_price,
-    ROW_NUMBER() OVER(PARTITION BY level ORDER BY base_price DESC) AS row_number_by_course_level,
-	  DENSE_RANK() OVER(PARTITION BY level ORDER BY base_price DESC) AS dense_rank_by_course_level,
-   RANK() OVER(PARTITION BY level ORDER BY base_price DESC) AS rank_by_course_level
+    ROW_NUMBER() OVER(PARTITION BY level ORDER BY base_price DESC) AS row_number,
+	  DENSE_RANK() OVER(PARTITION BY level ORDER BY base_price DESC) AS dense_rank,
+   RANK() OVER(PARTITION BY level ORDER BY base_price DESC) AS rank
   FROM products
   WHERE level = 'intermediate'
   ORDER BY level
@@ -117,17 +141,17 @@ drop_window_functions_example_tables()
 # get last 2 orders from each user -> focus on user_id = 5
 spark.sql("""
     WITH cte AS (
-        SELECT 
-            *,
-            ROW_NUMBER() OVER(PARTITION BY user_id ORDER BY order_date DESC) AS rn
+        SELECT *,
+               ROW_NUMBER() OVER(
+                   PARTITION BY user_id 
+                   ORDER BY order_date DESC
+               ) AS rn
         FROM orders
     )
-
-    SELECT 
-        u.user_id,
-        u.email,
-        cte.order_id,
-        cte.order_date
+    SELECT u.user_id,
+           u.email,
+           cte.order_id,
+           cte.order_date
     FROM cte 
     JOIN users AS u ON cte.user_id = u.user_id
     WHERE rn <= 2
@@ -152,14 +176,13 @@ spark.sql("""
 
 # Using QUALIFY
 spark.sql("""
-    SELECT 
-        u.user_id,
-        u.email,
-        o.order_id,
-        o.order_date
+    SELECT u.user_id, u.email, o.order_id, o.order_date
     FROM orders AS o
     JOIN users AS u ON o.user_id = u.user_id
-    QUALIFY ROW_NUMBER() OVER(PARTITION BY u.user_id ORDER BY o.order_date DESC) <= 2
+    QUALIFY ROW_NUMBER() OVER(
+        PARTITION BY u.user_id 
+        ORDER BY o.order_date DESC
+    ) <= 2
     ORDER BY u.user_id
 """).show(10, truncate=False)
 
@@ -271,7 +294,6 @@ spark.sql("""
         order_details_by_id_string:discount AS discount
     FROM order_details_json AS od
     JOIN products AS p ON od.order_details_by_id_string:product_id = p.product_id
-    LIMIT 5
 """).show(5, truncate=False)
 
 spark.sql("""
@@ -283,7 +305,6 @@ spark.sql("""
         order_details_by_id_struct.discount AS discount
     FROM order_details_json AS od
     JOIN products AS p ON od.order_details_by_id_struct.product_id = p.product_id
-    LIMIT 5
 """).show(5, truncate=False)
 
 # COMMAND ----------
@@ -366,7 +387,12 @@ create_variant_example_tables()
 
 # COMMAND ----------
 
-spark.sql("SELECT * FROM order_details_variant ORDER BY order_id").display()
+spark.sql("""
+    SELECT * 
+    FROM order_details_variant 
+    --WHERE order_id IN (2000, 2001, 2002, 2005)
+    ORDER BY order_id
+""").show(truncate=False)
 
 # COMMAND ----------
 
@@ -404,9 +430,15 @@ spark.sql("""
     ORDER BY order_id
 """)
 
-spark.sql("SELECT * FROM vw_order_details_variant").printSchema()
+spark.sql("""
+    SELECT * 
+    FROM vw_order_details_variant
+""").printSchema()
 
-spark.sql("SELECT * FROM vw_order_details_variant").show(5, truncate=False)
+spark.sql("""
+    SELECT * 
+    FROM vw_order_details_variant 
+""").show(3, truncate=False)
 
 # COMMAND ----------
 
@@ -416,14 +448,13 @@ spark.sql("SELECT * FROM vw_order_details_variant").show(5, truncate=False)
 spark.sql("""
     SELECT 
         order_id, 
-        order_details_by_id_variant:product_id::INT AS product_id,
+        order_details_by_id_variant:id::INT AS product_id,
         order_details_by_id_variant:unit_price::DOUBLE AS unit_price,
-        order_details_by_id_variant:discount::DOUBLE AS discount,
-        order_details_by_id_variant:auto_renew::STRING AS auto_renew,
+        order_details_by_id_variant:auto_renew::BOOLEAN AS auto_renew,
         order_details_by_id_variant:currency::STRING AS currency
-    FROM order_details_variant
+    FROM vw_order_details_variant
     ORDER BY order_id
-""").display()
+""").show()
 
 # COMMAND ----------
 
@@ -452,7 +483,9 @@ spark.sql("""
         SELECT 
             order_id,
             order_details_by_id_string,
-            TRY_PARSE_JSON(order_details_by_id_string) AS order_details_by_id_variant
+            TRY_PARSE_JSON(
+                order_details_by_id_string
+            ) AS order_details_by_id_variant
         FROM order_details_variant
         WHERE order_id = 2005
         ORDER BY order_id
@@ -496,7 +529,7 @@ spark.sql("""
             IN ('beginner','intermediate','advanced')
     )
     ORDER BY year_month
-""").show(truncate=False)
+""").show(5, truncate=False)
 
 # COMMAND ----------
 
@@ -544,7 +577,7 @@ spark.sql("""
         IN(advanced, beginner, intermediate)
     ) AS unpvt
     ORDER BY year_month, level
-""").show(10, truncate=False)
+""").show(5, truncate=False)
 
 # COMMAND ----------
 
