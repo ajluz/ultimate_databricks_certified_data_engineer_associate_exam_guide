@@ -13,6 +13,11 @@
 
 # COMMAND ----------
 
+spark.sql("USE CATALOG workspace")
+spark.sql("USE SCHEMA default")
+
+# COMMAND ----------
+
 create_join_example_tables()
 
 # COMMAND ----------

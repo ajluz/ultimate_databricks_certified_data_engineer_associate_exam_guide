@@ -12,6 +12,11 @@ generate_and_write_to_volume("06")
 
 # COMMAND ----------
 
+spark.sql("USE CATALOG workspace")
+spark.sql("USE SCHEMA default")
+
+# COMMAND ----------
+
 # MAGIC %md 
 # MAGIC ### Working with Window Functions
 

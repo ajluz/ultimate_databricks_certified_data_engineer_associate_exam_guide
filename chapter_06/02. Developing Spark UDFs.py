@@ -4,6 +4,11 @@
 
 # COMMAND ----------
 
+spark.sql("USE CATALOG workspace")
+spark.sql("USE SCHEMA default")
+
+# COMMAND ----------
+
 # Creating UDF using Spark SQL
 spark.sql("""
     CREATE OR REPLACE FUNCTION calculate_discount(
