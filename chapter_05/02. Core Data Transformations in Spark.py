@@ -1,6 +1,6 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Essential Data Transformations with Spark SQL
+# MAGIC # Core Data Transformations with Spark SQL
 
 # COMMAND ----------
 

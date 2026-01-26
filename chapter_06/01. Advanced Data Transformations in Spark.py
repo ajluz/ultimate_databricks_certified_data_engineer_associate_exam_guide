@@ -1,6 +1,6 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Performing Advanced Transformations
+# MAGIC # Advanced Data Transformations in Spark
 
 # COMMAND ----------
 
