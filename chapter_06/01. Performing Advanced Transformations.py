@@ -4,7 +4,11 @@
 
 # COMMAND ----------
 
-# MAGIC %run "./setup/setup_chapter_05"
+# MAGIC %run "./setup/setup_chapter_06"
+
+# COMMAND ----------
+
+generate_and_write_to_volume("06")
 
 # COMMAND ----------
 
@@ -17,7 +21,7 @@ create_window_functions_example_tables()
 
 # COMMAND ----------
 
-# Book - example for figure 5.5
+# Book - example for figure 6.1
 spark.sql("""
     SELECT p.level, p.product_id, p.base_price AS unit_price,
         SUM(p.base_price) OVER() AS `OVER`,
@@ -219,7 +223,7 @@ spark.sql("""
 print("Result from array_products_by_order files before using EXPLODE function:")
 spark.sql("""
     SELECT *
-    FROM json.`/Volumes/workspace/default/chapter_05/array_products_by_order/json`
+    FROM json.`/Volumes/workspace/default/chapter_06/array_products_by_order/json`
 """).show(5, truncate=False)
 
 # after exploding
@@ -229,7 +233,7 @@ spark.sql("""
         order_id, 
         array_products,
         EXPLODE(array_products) AS product_id
-    FROM json.`/Volumes/workspace/default/chapter_05/array_products_by_order/json`
+    FROM json.`/Volumes/workspace/default/chapter_06/array_products_by_order/json`
 """).show(10, truncate=False)
 
 # COMMAND ----------
@@ -239,7 +243,7 @@ spark.sql("""
     SELECT 
         order_id, 
         array_products
-    FROM json.`/Volumes/workspace/default/chapter_05/array_products_by_order/json`
+    FROM json.`/Volumes/workspace/default/chapter_06/array_products_by_order/json`
     WHERE ARRAY_CONTAINS(array_products, 2)
 """).show(5, truncate=False)
 
@@ -462,7 +466,7 @@ spark.sql("""
 spark.sql("""
     SELECT 
         schema_of_variant(order_details_by_id_variant) variant_row_schema
-    FROM order_details_variant
+    FROM vw_order_details_variant
 """).show(truncate=False)
 
 # COMMAND ----------
@@ -471,7 +475,7 @@ spark.sql("""
 spark.sql("""
     SELECT 
         schema_of_variant_agg(order_details_by_id_variant) variant_common_schema
-    FROM order_details_variant
+    FROM vw_order_details_variant
 """).collect()[0]['variant_common_schema']
 
 # COMMAND ----------

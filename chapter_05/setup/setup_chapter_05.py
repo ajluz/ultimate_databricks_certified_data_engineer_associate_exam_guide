@@ -1,4 +1,5 @@
 # Databricks notebook source
+# DBTITLE 1,Cell 1
 # MAGIC %pip install dbldatagen
 # MAGIC
 # MAGIC import dbldatagen as dg
@@ -6,118 +7,6 @@
 # MAGIC from pyspark.sql.window import Window
 # MAGIC import os
 # MAGIC import decimal
-# MAGIC
-# MAGIC def create_pivot_example_tables():
-# MAGIC     spark.sql("""
-# MAGIC         CREATE TABLE IF NOT EXISTS pivot_example 
-# MAGIC         AS
-# MAGIC             SELECT
-# MAGIC                 date_format(o.order_date, 'yyyy/MM') AS year_month,
-# MAGIC                 p.level,
-# MAGIC                 COUNT(*) AS qty
-# MAGIC             FROM products AS p
-# MAGIC             INNER JOIN order_details AS od ON p.product_id=od.product_id
-# MAGIC             INNER JOIN orders AS o ON od.order_id=o.order_id
-# MAGIC             GROUP BY date_format(o.order_date, 'yyyy/MM'),
-# MAGIC                     p.level
-# MAGIC             ORDER BY year_month,
-# MAGIC                     p.level
-# MAGIC     """)
-# MAGIC
-# MAGIC def drop_pivot_example_tables():
-# MAGIC     spark.sql("DROP TABLE IF EXISTS pivot_example")
-# MAGIC
-# MAGIC def create_unpivot_example_tables():
-# MAGIC     spark.sql("""
-# MAGIC         CREATE TABLE IF NOT EXISTS unpivot_example 
-# MAGIC         AS
-# MAGIC             SELECT *
-# MAGIC             FROM ( 
-# MAGIC                 SELECT year_month, level, qty 
-# MAGIC                 FROM pivot_example
-# MAGIC             ) AS q 
-# MAGIC             PIVOT(
-# MAGIC                 SUM(qty) 
-# MAGIC                 FOR level
-# MAGIC                     IN ('beginner','intermediate','advanced')
-# MAGIC             )
-# MAGIC             ORDER BY year_month
-# MAGIC     """)
-# MAGIC
-# MAGIC def drop_unpivot_example_tables():
-# MAGIC     spark.sql("DROP TABLE IF EXISTS unpivot_example")
-# MAGIC
-# MAGIC def create_grouping_sets_example_tables():
-# MAGIC     spark.sql("""
-# MAGIC         CREATE TABLE IF NOT EXISTS grouping_sets_example 
-# MAGIC         AS
-# MAGIC             SELECT
-# MAGIC                 date_format(o.order_date, 'yyyy/MM') AS year_month,
-# MAGIC                 p.level,
-# MAGIC                 COUNT(*) AS qty
-# MAGIC             FROM products AS p
-# MAGIC             INNER JOIN order_details AS od ON p.product_id=od.product_id
-# MAGIC             INNER JOIN orders AS o ON od.order_id=o.order_id
-# MAGIC             GROUP BY date_format(o.order_date, 'yyyy/MM'),
-# MAGIC                     p.level
-# MAGIC             ORDER BY year_month,
-# MAGIC                     p.level
-# MAGIC     """)
-# MAGIC
-# MAGIC def drop_grouping_sets_example_tables():
-# MAGIC     spark.sql("DROP TABLE IF EXISTS grouping_sets_example")
-# MAGIC
-# MAGIC def create_variant_example_tables():
-# MAGIC     spark.sql("""
-# MAGIC         CREATE TABLE IF NOT EXISTS order_details_variant
-# MAGIC         AS
-# MAGIC             SELECT 
-# MAGIC                 2000 AS order_id,
-# MAGIC                 '{"discount":0.05,"product_id":5,"unit_price":283.0}' AS order_details_by_id_string
-# MAGIC             UNION ALL
-# MAGIC             SELECT 
-# MAGIC                 2001,
-# MAGIC                 '{"id": 50, "unit_price": 99.99, "discount": 0.15, "qty": 2}'
-# MAGIC             UNION ALL
-# MAGIC             SELECT 
-# MAGIC                 2002,
-# MAGIC                 '{"name": "New Course 1", "price": 149.99, "currency": "USD"}'
-# MAGIC             UNION ALL
-# MAGIC             SELECT 
-# MAGIC                 2003,
-# MAGIC                 '{"item": "New Course 2", "cost": 59.99, "tax": 4.80, "shipping": 5.00, "total": 69.79}'
-# MAGIC             UNION ALL
-# MAGIC             SELECT 
-# MAGIC                 2004,
-# MAGIC                 '{"id": 123, "description": "Subscription", "monthly_fee": 29.99, "billing_cycle": "monthly", "auto_renew": true}'
-# MAGIC             UNION ALL 
-# MAGIC             SELECT 
-# MAGIC                 2005,
-# MAGIC                 '{"product_id": 1, ]'
-# MAGIC     """)
-# MAGIC
-# MAGIC def drop_variant_example_tables():
-# MAGIC     spark.sql("DROP TABLE IF EXISTS order_details_variant")
-# MAGIC
-# MAGIC def create_json_example_tables():
-# MAGIC     spark.sql("""
-# MAGIC         CREATE TABLE IF NOT EXISTS order_details_json 
-# MAGIC         AS
-# MAGIC             WITH cte AS (
-# MAGIC                 SELECT 
-# MAGIC                     order_id,
-# MAGIC                     explode(order_details) AS order_details_by_id
-# MAGIC                 FROM json.`/Volumes/workspace/default/chapter_05/order_details_dict/json`
-# MAGIC             )
-# MAGIC             SELECT 
-# MAGIC                 order_id,
-# MAGIC                 TO_JSON(order_details_by_id) AS order_details_by_id_string,
-# MAGIC                 order_details_by_id AS order_details_by_id_struct
-# MAGIC             FROM cte
-# MAGIC     """)
-# MAGIC
-# MAGIC def drop_json_example_tables():
-# MAGIC     spark.sql("DROP TABLE IF EXISTS order_details_json")
 # MAGIC
 # MAGIC def create_set_operators_example_tables():
 # MAGIC     spark.sql("""
@@ -141,7 +30,7 @@
 # MAGIC     spark.sql("DROP TABLE IF EXISTS deep_clone_users")
 # MAGIC     spark.sql("DROP TABLE IF EXISTS shallow_clone_users")
 # MAGIC
-# MAGIC def cleanup():
+# MAGIC def drop_tables():
 # MAGIC     tables = [
 # MAGIC         "workspace.default.users",
 # MAGIC         "workspace.default.orders",
@@ -150,26 +39,6 @@
 # MAGIC     ]
 # MAGIC     for table in tables:
 # MAGIC         spark.sql(f"DROP TABLE IF EXISTS {table}")
-# MAGIC
-# MAGIC def create_window_functions_example_tables():
-# MAGIC     spark.sql("""
-# MAGIC         CREATE TABLE IF NOT EXISTS revenue_by_course_level_and_quarter 
-# MAGIC         AS 
-# MAGIC             SELECT
-# MAGIC                 p.level,
-# MAGIC                 YEAR(o.order_date) AS year,
-# MAGIC                 QUARTER(o.order_date) AS quarter,
-# MAGIC                 CAST(SUM(od.unit_price) AS DECIMAL(10,2)) AS revenue
-# MAGIC             FROM products p
-# MAGIC             JOIN order_details od ON p.product_id = od.product_id
-# MAGIC             JOIN orders o ON od.order_id = o.order_id
-# MAGIC             GROUP BY p.level, 
-# MAGIC                      YEAR(o.order_date), 
-# MAGIC                      QUARTER(o.order_date)
-# MAGIC     """)
-# MAGIC
-# MAGIC def drop_window_functions_example_tables():
-# MAGIC     spark.sql("DROP TABLE IF EXISTS revenue_by_course_level_and_quarter")
 # MAGIC
 # MAGIC def create_join_example_tables():
 # MAGIC     spark.sql("""
@@ -193,6 +62,18 @@
 # MAGIC def create_volume(chapter_number: str):
 # MAGIC     spark.sql(f"create volume if not exists workspace.default.chapter_{chapter_number}")
 # MAGIC
+# MAGIC def copy_file_workspace_to_volume(source_path: str, target_path: str):
+# MAGIC     import os
+# MAGIC     try:
+# MAGIC         target_dir = os.path.dirname(target_path)
+# MAGIC         os.makedirs(target_dir, exist_ok=True)
+# MAGIC         with open(source_path, "rb") as src:
+# MAGIC             data = src.read()
+# MAGIC         with open(target_path, "wb") as dst:
+# MAGIC             dst.write(data)
+# MAGIC     except Exception as e:
+# MAGIC         print(f"Error copying file: {e}")
+# MAGIC
 # MAGIC def copy_binary_file_to_volume(chapter_number: str):
 # MAGIC     repo_folder = "ultimate_databricks_certified_data_engineer_associate_exam_guide"
 # MAGIC     target_path = f"/Volumes/workspace/default/chapter_{chapter_number}/binary/db_diagram.png"
@@ -201,16 +82,17 @@
 # MAGIC     repo_index = next((i for i, part in enumerate(path_parts) if part == repo_folder), None)
 # MAGIC     if repo_index is None:
 # MAGIC         raise ValueError(f"Repository folder '{repo_folder}' not found in notebook path: {notebook_path}")
-# MAGIC
 # MAGIC     workspace_root = "/Workspace/" + "/".join(path_parts[1:repo_index + 1])
-# MAGIC     try: 
-# MAGIC         # when using serverless compute
-# MAGIC         source_file = f"{workspace_root}/00_data_files/db_diagram.png"
-# MAGIC         dbutils.fs.cp(source_file, target_path, recurse=False)
-# MAGIC     except Exception as e:
-# MAGIC         # when using all purpose compute
-# MAGIC         source_file = f"file:{workspace_root}/00_data_files/db_diagram.png"
-# MAGIC         dbutils.fs.cp(source_file, target_path, recurse=False)
+# MAGIC     source_file = f"{workspace_root}/00_data_files/db_diagram.png"
+# MAGIC     copy_file_workspace_to_volume(source_file, target_path)
+# MAGIC     # try: 
+# MAGIC     #     # when using serverless compute
+# MAGIC     #     source_file = f"{workspace_root}/00_data_files/db_diagram.png"
+# MAGIC     #     dbutils.fs.cp(source_file, target_path, recurse=False)
+# MAGIC     # except Exception as e:
+# MAGIC     #     # when using all purpose compute
+# MAGIC     #     source_file = f"file:{workspace_root}/00_data_files/db_diagram.png"
+# MAGIC     #     dbutils.fs.cp(source_file, target_path, recurse=False)
 # MAGIC
 # MAGIC def write_text_file(chapter_number: str):
 # MAGIC     log_dir = f"/Volumes/workspace/default/chapter_{chapter_number}/log/text/"
@@ -230,32 +112,6 @@
 # MAGIC     for index, file_name in enumerate(data_files, start=1):
 # MAGIC         path = temp_path.replace('temp/', '')
 # MAGIC         dbutils.fs.mv(file_name.path, f"{path}{table_name}_0{index}.{file_format}")
-# MAGIC
-# MAGIC def create_complex_data_files(chapter_number: str, temp_root: str):
-# MAGIC     od_path = f"/Volumes/workspace/default/chapter_{chapter_number}/order_details/parquet/"
-# MAGIC     df = spark.read.parquet(od_path)
-# MAGIC
-# MAGIC     array_products = (
-# MAGIC         df.groupBy("order_id")
-# MAGIC           .agg(F.collect_list("product_id").alias("array_products"))
-# MAGIC     )
-# MAGIC
-# MAGIC     order_details_dict = (
-# MAGIC         df.groupBy("order_id")
-# MAGIC           .agg(F.collect_list(F.struct(
-# MAGIC                 F.col("product_id").alias("product_id"),
-# MAGIC                 F.col("unit_price").alias("unit_price"),
-# MAGIC                 F.col("discount").alias("discount")
-# MAGIC           )).alias("order_details"))
-# MAGIC     )
-# MAGIC
-# MAGIC     (array_products.repartition(4)
-# MAGIC         .write.mode("overwrite").format("json")
-# MAGIC         .save(f"{temp_root}/array_products_by_order/json/"))
-# MAGIC
-# MAGIC     (order_details_dict.repartition(4)
-# MAGIC         .write.mode("overwrite").format("json")
-# MAGIC         .save(f"{temp_root}/order_details_dict/json/"))
 # MAGIC
 # MAGIC def write_all_formats(df, main_temp_path: str, table_name: str, one_file: bool = False):
 # MAGIC     dict_types = { 
@@ -288,6 +144,7 @@
 # MAGIC     ):
 # MAGIC
 # MAGIC     drop_volume(chapter_number)
+# MAGIC     drop_tables()
 # MAGIC     create_volume(chapter_number)
 # MAGIC     main_temp_path = f"/Volumes/workspace/default/chapter_{chapter_number}/temp"
 # MAGIC
@@ -495,9 +352,5 @@
 # MAGIC     write_all_formats(orders_df.select("order_id","user_id","order_date","payment_method","installments"),
 # MAGIC                       main_temp_path, "orders")
 # MAGIC     write_all_formats(details_df,  main_temp_path, "order_details")
-# MAGIC
-# MAGIC     create_complex_data_files(chapter_number, main_temp_path)
-# MAGIC     create_enumerated_files(f"{main_temp_path}/array_products_by_order/json/", "array_products_by_order", "json")
-# MAGIC     create_enumerated_files(f"{main_temp_path}/order_details_dict/json/", "order_details_dict", "json")
 # MAGIC
 # MAGIC     dbutils.fs.rm(main_temp_path, True)
