@@ -147,7 +147,8 @@
 # MAGIC                 random=True,
 # MAGIC                 omit=True,
 # MAGIC                 weights=mail_distribution,
-# MAGIC                 values=mail_providers
+# MAGIC                 values=mail_providers,
+# MAGIC                 baseColumn=["hash"]
 # MAGIC             )
 # MAGIC             .withColumn(
 # MAGIC                 "user_email",
@@ -162,7 +163,8 @@
 # MAGIC                 random=True,
 # MAGIC                 omit=True,
 # MAGIC                 weights=gender_distribution,
-# MAGIC                 values=genders
+# MAGIC                 values=genders,
+# MAGIC                 baseColumn=["hash"]
 # MAGIC             )
 # MAGIC             .withColumn(
 # MAGIC                 "profession",
@@ -375,7 +377,7 @@
 # MAGIC
 # MAGIC     sample_rows = max(1000, sample_rows)
 # MAGIC     sample_df = _build_df(sample_rows)
-# MAGIC     avg_row_size = sample_df.toJSON().rdd.map(lambda r: len(r)).mean()
+# MAGIC     avg_row_size = sample_df.toJSON().map(lambda r: len(r)).mean()
 # MAGIC     avg_row_size = avg_row_size if avg_row_size and avg_row_size > 0 else 1
 # MAGIC
 # MAGIC     total_rows = int((target_files * target_file_size_bytes) / avg_row_size)
