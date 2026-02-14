@@ -155,7 +155,7 @@
 # MAGIC                 StringType(),
 # MAGIC                 omit=True,
 # MAGIC                 expr="concat('user_', concat(left(hash,4),substr(hash,14,2),right(hash,4)), mail_provider)",
-# MAGIC                 baseColumn=["hash"]
+# MAGIC                 baseColumn=["hash", "mail_provider"]
 # MAGIC             )
 # MAGIC             .withColumn(
 # MAGIC                 "gender",
@@ -377,7 +377,7 @@
 # MAGIC
 # MAGIC     sample_rows = max(1000, sample_rows)
 # MAGIC     sample_df = _build_df(sample_rows)
-# MAGIC     avg_row_size = sample_df.toJSON().map(lambda r: len(r)).mean()
+# MAGIC     avg_row_size = sample_df.select(F.avg(F.length(F.to_json(F.struct(*sample_df.columns))))).collect()[0][0]
 # MAGIC     avg_row_size = avg_row_size if avg_row_size and avg_row_size > 0 else 1
 # MAGIC
 # MAGIC     total_rows = int((target_files * target_file_size_bytes) / avg_row_size)
