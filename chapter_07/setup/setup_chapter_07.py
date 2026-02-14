@@ -23,15 +23,15 @@
 # MAGIC
 # MAGIC def generate_and_write_to_volume(
 # MAGIC     chapter_number: str,
-# MAGIC     target_files: int = 60,
-# MAGIC     target_file_size_bytes: int = 14831751,
+# MAGIC     target_files: int = 100,
+# MAGIC     target_file_size_bytes: int = 10485760,
 # MAGIC     sample_rows: int = 10000,
 # MAGIC     ):
 # MAGIC
 # MAGIC     drop_volume(chapter_number)
 # MAGIC     create_volume(chapter_number)
 # MAGIC
-# MAGIC     target_files = max(50, min(80, target_files))
+# MAGIC     target_files = max(50, min(120, target_files))
 # MAGIC
 # MAGIC     countries = [
 # MAGIC         ("US","United States"), ("BR","Brazil"), ("IN","India"), ("GB","United Kingdom"),
