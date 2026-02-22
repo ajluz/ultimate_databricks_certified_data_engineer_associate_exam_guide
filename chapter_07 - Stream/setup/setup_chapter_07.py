@@ -384,7 +384,7 @@
 # MAGIC     total_rows = max(total_rows, target_files * 1000)
 # MAGIC
 # MAGIC     df = _build_df(total_rows)
-# MAGIC     output_path = f"/Volumes/workspace/default/{chapter_number}/api_stream_data"
+# MAGIC     output_path = f"/Volumes/workspace/default/chapter_{chapter_number}/api_stream_data"
 # MAGIC
 # MAGIC     (df.repartition(target_files)
 # MAGIC        .write
