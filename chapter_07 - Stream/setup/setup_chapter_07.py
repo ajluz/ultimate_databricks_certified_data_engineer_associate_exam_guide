@@ -146,7 +146,6 @@
 # MAGIC             .withColumn(
 # MAGIC                 "mail_provider",
 # MAGIC                 "string",
-# MAGIC                 random=True,
 # MAGIC                 omit=True,
 # MAGIC                 weights=mail_distribution,
 # MAGIC                 values=mail_providers,
@@ -162,7 +161,6 @@
 # MAGIC             .withColumn(
 # MAGIC                 "gender",
 # MAGIC                 "string",
-# MAGIC                 random=True,
 # MAGIC                 omit=True,
 # MAGIC                 weights=gender_distribution,
 # MAGIC                 values=genders,
