@@ -7,8 +7,6 @@
 # MAGIC from pyspark.sql.types import *
 # MAGIC import os
 # MAGIC import decimal
-# MAGIC import logging
-# MAGIC logging.getLogger("dbldatagen").setLevel(logging.ERROR)
 # MAGIC
 # MAGIC # def drop_tables():
 # MAGIC #     tables = [
@@ -146,6 +144,7 @@
 # MAGIC             .withColumn(
 # MAGIC                 "mail_provider",
 # MAGIC                 "string",
+# MAGIC                 random=True,
 # MAGIC                 omit=True,
 # MAGIC                 weights=mail_distribution,
 # MAGIC                 values=mail_providers,
@@ -161,6 +160,7 @@
 # MAGIC             .withColumn(
 # MAGIC                 "gender",
 # MAGIC                 "string",
+# MAGIC                 random=True,
 # MAGIC                 omit=True,
 # MAGIC                 weights=gender_distribution,
 # MAGIC                 values=genders,
@@ -263,18 +263,18 @@
 # MAGIC             )
 # MAGIC             .withColumn(
 # MAGIC                 "installments",
-# MAGIC                 LongType(),
+# MAGIC                 StringType(),
 # MAGIC                 omit=True,
-# MAGIC                 expr="""cast(case when payment_method != 'credit_card'
+# MAGIC                 expr="""case when payment_method != 'credit_card'
 # MAGIC                             then 1 
-# MAGIC                         else base_installments end as bigint)""",
-# MAGIC                 baseColumn=["access_id",'base_installments','payment_method','hash']
+# MAGIC                         else base_installments end""",
+# MAGIC                 baseColumn=["access_id",'base_installments','payment_method']
 # MAGIC             )
 # MAGIC             .withColumn(
 # MAGIC                 "installment_value",
 # MAGIC                 DecimalType(9,2),
 # MAGIC                 omit=True,
-# MAGIC                 expr="cast((final_price/cast(installments as bigint)) as numeric(9,2))",
+# MAGIC                 expr="cast((final_price/installments) as numeric(9,2))",
 # MAGIC                 baseColumn=["access_id",'installments','final_price']
 # MAGIC             )
 # MAGIC             .withColumn(
