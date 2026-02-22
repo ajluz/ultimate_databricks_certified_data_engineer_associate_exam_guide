@@ -7,6 +7,8 @@
 # MAGIC from pyspark.sql.types import *
 # MAGIC import os
 # MAGIC import decimal
+# MAGIC import logging
+# MAGIC logging.getLogger("dbldatagen").setLevel(logging.ERROR)
 # MAGIC
 # MAGIC # def drop_tables():
 # MAGIC #     tables = [
