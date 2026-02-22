@@ -263,7 +263,7 @@
 # MAGIC             )
 # MAGIC             .withColumn(
 # MAGIC                 "installments",
-# MAGIC                 StringType(),
+# MAGIC                 LongType(),
 # MAGIC                 omit=True,
 # MAGIC                 expr="""case when payment_method != 'credit_card'
 # MAGIC                             then 1 
