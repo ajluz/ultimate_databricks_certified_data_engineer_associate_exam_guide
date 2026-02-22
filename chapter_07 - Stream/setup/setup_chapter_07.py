@@ -265,16 +265,16 @@
 # MAGIC                 "installments",
 # MAGIC                 LongType(),
 # MAGIC                 omit=True,
-# MAGIC                 expr="""case when payment_method != 'credit_card'
+# MAGIC                 expr="""cast(case when payment_method != 'credit_card'
 # MAGIC                             then 1 
-# MAGIC                         else base_installments end""",
-# MAGIC                 baseColumn=["access_id",'base_installments','payment_method']
+# MAGIC                         else base_installments end as bigint)""",
+# MAGIC                 baseColumn=["access_id",'base_installments','payment_method','hash']
 # MAGIC             )
 # MAGIC             .withColumn(
 # MAGIC                 "installment_value",
 # MAGIC                 DecimalType(9,2),
 # MAGIC                 omit=True,
-# MAGIC                 expr="cast((final_price/installments) as numeric(9,2))",
+# MAGIC                 expr="cast((final_price/cast(installments as bigint)) as numeric(9,2))",
 # MAGIC                 baseColumn=["access_id",'installments','final_price']
 # MAGIC             )
 # MAGIC             .withColumn(
