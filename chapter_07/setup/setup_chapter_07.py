@@ -393,3 +393,12 @@
 # MAGIC        .save(output_path))
 # MAGIC
 # MAGIC     return output_path
+
+# COMMAND ----------
+
+spark.conf.set("spark.sql.shuffle.partitions", 5)
+
+# COMMAND ----------
+
+spark.sql("USE CATALOG workspace")
+spark.sql("USE SCHEMA default")

@@ -3,20 +3,16 @@
 # [tool.databricks.environment]
 # environment_version = "4"
 # ///
+# MAGIC %md
+# MAGIC # Introduction to Spark Structured Streaming
+
+# COMMAND ----------
+
 # MAGIC %run "./setup/setup_chapter_07"
 
 # COMMAND ----------
 
-from pyspark.sql.functions import col, sum
-spark.conf.set("spark.sql.shuffle.partitions", 5)
-
-# COMMAND ----------
-
 generate_and_write_to_volume("07")
-
-# COMMAND ----------
-
-display(dbutils.fs.ls("/Volumes/workspace/default/chapter_07/api_stream_data/"))
 
 # COMMAND ----------
 
@@ -35,18 +31,19 @@ from pyspark.sql.types import TimestampType
 
 # a opção maxFilePerTrigger vai definir quantos arquivos podem ser lidos por vez dentro do processo de stream.
 # a leitura do Stream assim como no batch é Lazy Evaluated. Ele não vai iniciar até que uma action seja chamada.
-raw_api_stream_data = (
+df_stream = (
     spark.readStream
-         .schema(schema)
+         .format("json")
+        #  .schema(schema)
          .option('maxFilesPerTrigger', 1)
-         .json(stream_path)
+         .load(stream_path)
 )
 
 # COMMAND ----------
 
 # display information about the source payload related to api requests.
 display(
-  raw_api_stream_data,
+  df_stream,
   # this "checkpointLocation" parameter is necessary when we execution actions on stream within Databricks Free Edition.
   checkpointLocation = "/Volumes/workspace/default/chapter_07/api_stream_data/_checkpoint/exemple1"
 )
