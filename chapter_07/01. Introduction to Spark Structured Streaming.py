@@ -16,8 +16,24 @@ generate_and_write_to_volume("07")
 
 # COMMAND ----------
 
-# catching schema from the files
 stream_path = "/Volumes/workspace/default/chapter_07/api_stream_data/"
+
+df_stream = (
+    spark.readStream
+         .format("json")
+         .option('maxFilesPerTrigger', 1)
+         .load(stream_path)
+)
+
+# COMMAND ----------
+
+display(
+  df_stream,
+  # this "checkpointLocation" parameter is necessary when we execution actions on stream within Databricks Free Edition.
+  checkpointLocation = "/Volumes/workspace/default/chapter_07/api_stream_data/_checkpoint/exemple1"
+)
+
+# COMMAND ----------
 
 static = spark.read.json(stream_path)
 schema = static.schema
@@ -26,17 +42,18 @@ print(schema)
 
 # COMMAND ----------
 
-from pyspark.sql.functions import from_unixtime, year
-from pyspark.sql.types import TimestampType
-
-# a opção maxFilePerTrigger vai definir quantos arquivos podem ser lidos por vez dentro do processo de stream.
-# a leitura do Stream assim como no batch é Lazy Evaluated. Ele não vai iniciar até que uma action seja chamada.
 df_stream = (
     spark.readStream
          .format("json")
-        #  .schema(schema)
+         .schema(schema)
          .option('maxFilesPerTrigger', 1)
          .load(stream_path)
+)
+
+display(
+  df_stream,
+  # this "checkpointLocation" parameter is necessary when we execution actions on stream within Databricks Free Edition.
+  checkpointLocation = "/Volumes/workspace/default/chapter_07/api_stream_data/_checkpoint/exemple2"
 )
 
 # COMMAND ----------
