@@ -1,5 +1,14 @@
 # Databricks notebook source
+# /// script
+# [tool.databricks.environment]
+# environment_version = "4"
+# ///
 # MAGIC %run "./setup/setup_chapter_07"
+
+# COMMAND ----------
+
+from pyspark.sql.functions import col, sum
+spark.conf.set("spark.sql.shuffle.partitions", 5)
 
 # COMMAND ----------
 
@@ -7,14 +16,11 @@ generate_and_write_to_volume("07")
 
 # COMMAND ----------
 
-spark.conf.set("spark.sql.shuffle.partitions", 5)
-
-# COMMAND ----------
-
 display(dbutils.fs.ls("/Volumes/workspace/default/chapter_07/api_stream_data/"))
 
 # COMMAND ----------
 
+# catching schema from the files
 stream_path = "/Volumes/workspace/default/chapter_07/api_stream_data/"
 
 static = spark.read.json(stream_path)
@@ -27,9 +33,9 @@ print(schema)
 from pyspark.sql.functions import from_unixtime, year
 from pyspark.sql.types import TimestampType
 
-# a opção maxFilePerTrigger vai definir quantos arquivos podem ser lidos por vez dentro do processo de stream. 
-# a leitura do Stream assim como no batch é Lazy Evaluated. Ele não vai iniciar até que uma action seja chamada. 
-streaming = (
+# a opção maxFilePerTrigger vai definir quantos arquivos podem ser lidos por vez dentro do processo de stream.
+# a leitura do Stream assim como no batch é Lazy Evaluated. Ele não vai iniciar até que uma action seja chamada.
+raw_api_stream_data = (
     spark.readStream
          .schema(schema)
          .option('maxFilesPerTrigger', 1)
@@ -38,23 +44,74 @@ streaming = (
 
 # COMMAND ----------
 
-# DBTITLE 1,Cell 7
+# display information about the source payload related to api requests.
 display(
-  spark.readStream
-       .schema(schema)
-       .format('json')
-       .load(stream_path),
-  checkpointLocation='/Volumes/workspace/default/chapter_07/checkpoint/display_7',
-  streamingQuery={'outputMode': 'append'}
+  raw_api_stream_data,
+  # this "checkpointLocation" parameter is necessary when we execution actions on stream within Databricks Free Edition.
+  checkpointLocation = "/Volumes/workspace/default/chapter_07/api_stream_data/_checkpoint/exemple1"
 )
 
 # COMMAND ----------
 
-streaming = (
-    spark.readStream
-         .schema(schema)
-         .option('maxFilesPerTrigger', 1)
-         .json(stream_path)
+checkpointlocation1 = "/Volumes/workspace/default/chapter_07/_checkpoint/transformation_1"
+
+# Since we are running on Databricks Free, the checkpoint used into each action must be excluded after each runtime.
+
+dbutils.fs.rm(checkpointlocation1, True)
+
+(
+  (
+    raw_api_stream_data
+      .withColumn("payment_info",col('payload').payment_info)
+      .withColumn("discount",col('payment_info').discount)
+      .withColumn("final_price",col('payment_info').final_price)
+      .withColumn("installment_value",col('payment_info').installment_value)
+      .withColumn("installments",col('payment_info').installments)
+      .withColumn("payment_method",col('payment_info').payment_method)
+      .where("final_price IS NOT NULL")
+      .drop('payload', 'payment_info'))
+      .writeStream
+      .format("memory")
+      .option("checkpointLocation",checkpointlocation1)
+      .trigger(availableNow=True)
+      .outputMode("append")
+      .queryName("transformation_1")
+      .start()
+).awaitTermination()
+
+# Ensure proper use of awaitTermination() with availableNow trigger in streaming jobs
+
+# The awaitTermination() method must be used together with trigger(availableNow=True) to prevent synchronous execution conflicts between the same notebook cell and other cells.
+
+# This ensures that the streaming process completes correctly without blocking or interfering with parallel notebook execution.
+
+# COMMAND ----------
+
+display(spark.sql("SELECT * FROM transformation_1"))
+
+# COMMAND ----------
+
+checkpointlocation2 = "/Volumes/workspace/default/chapter_07/_checkpoint/transformation_2"
+
+# Since we are running on Databricks Free, the checkpoint used into each action must be excluded after each runtime.
+
+dbutils.fs.rm(checkpointlocation2, True)
+
+(
+  (
+    transformation_1
+      .groupBy(col("access_point"))
+      .agg(
+        (sum("installment_value") * sum("installments")).alias("total_installment_value")
+      )
+      .writeStream
+      .format("memory")
+      .option("checkpointLocation", checkpointlocation2)
+      .trigger(availableNow=True)
+      .outputMode("append")
+      .queryName("transformation_2")
+      .start()
+  ).awaitTermination()
 )
 
 # COMMAND ----------
@@ -75,7 +132,7 @@ activityQuery = (
                   .format("memory")
                   .option("checkpointLocation","/Volumes/workspace/default/chapter_07/checkpoint/test_5")
                   .trigger(availableNow=True)
-                  .outputMode("complete")
+                  .outputMode("append")
                   .start()
 )
 
@@ -222,6 +279,38 @@ deviceModelStats_stream_to_static_join = (
 
 # COMMAND ----------
 
+stream_path = "/Volumes/workspace/default/chapter_07/api_stream_data/"
+
+# Lendo dados de um diretório usando o Auto Loader para inferencia e evolução de schema
+# para usar o Auto Loader o metodo format() precisa receber o valor CloudFiles como parametro
+# a option cloudFiles.format é obrigatória e define o formato do arquivo
+# a option cloudFiles.schemaLocation define onde o spark vai armazenar o schema que foi inferido
+# a option cloudFiles.schemaEvolutionMode define como o Auto Loader vai lidar com evoluções de schema
+# a option cloudFiles.inferColumnTypes vai inferir os tipos de dados das colunas. Default False
+
+static = spark.read.json(stream_path)
+schema = static.schema
+
+autoLoaderDf = (
+    spark.readStream
+         .format('json')
+         .option('maxFilesPerTrigger', 1)
+         .schema(schema)
+        #  .option('cloudFiles.format', 'json')
+        #  .option('cloudFiles.schemaLocation', '/Volumes/workspace/default/chapter_07/autoloader/test_1')
+        #  .option('cloudFiles.schemaEvolutionMode', 'addNewColumns')
+        #  .option('cloudFiles.inferColumnTypes', True)
+        #  .option('checkpointLocation', '/Volumes/workspace/default/chapter_07/autoloader/checkpoint/test_1')
+         .load(stream_path)
+)
+
+display(
+  autoLoaderDf,
+  checkpointLocation = "/Volumes/workspace/default/chapter_07/no_autoloader/checkpoint/test_102"
+)
+
+# COMMAND ----------
+
 stream_path = "/databricks-datasets/definitive-guide/data/activity-data/"
 
 # Lendo dados de um diretório usando o Auto Loader para inferencia e evolução de schema
@@ -236,13 +325,17 @@ autoLoaderDf = (
          .format('CloudFiles')
          .option('cloudFiles.maxFilesPerTrigger', 1)
          .option('cloudFiles.format', 'json')
-         .option('cloudFiles.schemaLocation', '/FileStore/clube_do_livro/episodio17/_schemas/auto_loader')
+         .option('cloudFiles.schemaLocation', '/Volumes/workspace/default/chapter_07/autoloader/test_1')
          .option('cloudFiles.schemaEvolutionMode', 'addNewColumns')
          .option('cloudFiles.inferColumnTypes', True)
+        #  .option('checkpointLocation', '/Volumes/workspace/default/chapter_07/autoloader/checkpoint/test_1')
          .load(stream_path)
 )
 
-display(autoLoaderDf)
+display(
+  autoLoaderDf,
+  checkpointLocation = "/Volumes/workspace/default/chapter_07/autoloader/checkpoint/test_1"
+)
 
 # COMMAND ----------
 
