@@ -42,6 +42,8 @@ print(schema)
 
 # COMMAND ----------
 
+dbutils.fs.rm("/Volumes/workspace/default/chapter_07/api_stream_data/_checkpoint/exemple2",True)
+
 df_stream = (
     spark.readStream
          .format("json")
@@ -56,14 +58,7 @@ display(
   checkpointLocation = "/Volumes/workspace/default/chapter_07/api_stream_data/_checkpoint/exemple2"
 )
 
-# COMMAND ----------
 
-# display information about the source payload related to api requests.
-display(
-  df_stream,
-  # this "checkpointLocation" parameter is necessary when we execution actions on stream within Databricks Free Edition.
-  checkpointLocation = "/Volumes/workspace/default/chapter_07/api_stream_data/_checkpoint/exemple1"
-)
 
 # COMMAND ----------
 
