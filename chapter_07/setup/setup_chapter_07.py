@@ -392,6 +392,13 @@
 # MAGIC        .mode('overwrite')
 # MAGIC        .save(output_path))
 # MAGIC
+# MAGIC     # create a Delta table having the generated json files as source
+# MAGIC     (spark.read.json(output_path)
+# MAGIC        .write
+# MAGIC        .format('delta')
+# MAGIC        .mode('overwrite')
+# MAGIC        .saveAsTable('workspace.default.tb_api_stream_data'))
+# MAGIC
 # MAGIC     return output_path
 
 # COMMAND ----------
