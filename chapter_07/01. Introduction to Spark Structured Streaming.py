@@ -16,6 +16,25 @@ generate_and_write_to_volume("07")
 
 # COMMAND ----------
 
+# MAGIC %md ### Kafka Source
+
+# COMMAND ----------
+
+# df_stream = (
+#     spark.readStream
+#         .format("kafka")
+#         .option("kafka.bootstrap.servers", "broker:9092")
+#         .option("subscribe", "orders")
+#         .option("startingOffsets", "earliest")
+#         .load()
+# )
+
+# COMMAND ----------
+
+# MAGIC %md ### File Source
+
+# COMMAND ----------
+
 stream_path = "/Volumes/workspace/default/chapter_07/api_stream_data/"
 
 df_stream = (
@@ -64,6 +83,10 @@ df_stream.isStreaming
 
 # COMMAND ----------
 
+# MAGIC %md ### Delta Table Source
+
+# COMMAND ----------
+
 # dbutils.fs.rm("/Volumes/workspace/default/chapter_07/api_stream_data/_checkpoint/exemple_2",True)
 
 df_stream_delta = (
@@ -76,6 +99,10 @@ display(
   # this "checkpointLocation" parameter is necessary when we execution actions on stream within Databricks Free Edition.
   ,checkpointLocation = "/Volumes/workspace/default/chapter_07/api_stream_data/_checkpoint/exemple_2"
 )
+
+# COMMAND ----------
+
+# MAGIC %md ### Transformations in Structured Streaming
 
 # COMMAND ----------
 
@@ -93,6 +120,10 @@ df_transformed = (
       .where("final_price IS NOT NULL")
       .drop('payload', 'payment_info'))
 )
+
+# COMMAND ----------
+
+# MAGIC %md ### Writing Data to Streaming Sinks
 
 # COMMAND ----------
 
@@ -123,6 +154,10 @@ spark.sql("""
 
 for stream in spark.streams.active:
     print(stream.lastProgress)
+
+# COMMAND ----------
+
+# MAGIC %md ### Schema Inference and Evolution on Streaming
 
 # COMMAND ----------
 
