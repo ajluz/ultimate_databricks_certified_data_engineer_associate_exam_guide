@@ -161,12 +161,15 @@ for stream in spark.streams.active:
 
 # COMMAND ----------
 
+schemaLocation = '/Volumes/workspace/default/chapter_07/autoloader/test_1'
+# dbutils.fs.rm('/Volumes/workspace/default/chapter_07/autoloader/test_1',True)
+
 autoLoaderDf = (
     spark.readStream
          .format('CloudFiles')
          .option('cloudFiles.maxFilesPerTrigger', 1)
          .option('cloudFiles.format', 'json')
-         .option('cloudFiles.schemaLocation', '/Volumes/workspace/default/chapter_07/autoloader/test_1')
+         .option('cloudFiles.schemaLocation', schemaLocation)
          .option('cloudFiles.schemaEvolutionMode', 'addNewColumns')
          .option('cloudFiles.inferColumnTypes', True)
          .load(stream_path)
