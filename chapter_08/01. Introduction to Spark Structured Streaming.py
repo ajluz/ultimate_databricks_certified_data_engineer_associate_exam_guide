@@ -1,7 +1,7 @@
 # Databricks notebook source
 # /// script
 # [tool.databricks.environment]
-# environment_version = "4"
+# environment_version = "5"
 # ///
 # MAGIC %md
 # MAGIC # Introduction to Spark Structured Streaming
@@ -13,6 +13,25 @@
 # COMMAND ----------
 
 generate_and_write_to_volume("07")
+
+# COMMAND ----------
+
+# MAGIC %md ### Kafka Source
+
+# COMMAND ----------
+
+# df_stream = (
+# 	    spark.readStream
+# 	        .format("kafka")
+# 	        .option("kafka.bootstrap.servers", "broker:9092")
+# 	        .option("subscribe", "orders")
+# 	        .option("startingOffsets", "earliest")
+# 	        .load()
+# 	)
+
+# COMMAND ----------
+
+# MAGIC %md ### File Source
 
 # COMMAND ----------
 
@@ -60,7 +79,7 @@ display(
 
 # COMMAND ----------
 
-df_stream.isStreaming
+# MAGIC %md ### Delta Table Source
 
 # COMMAND ----------
 
@@ -79,6 +98,10 @@ display(
 
 # COMMAND ----------
 
+# MAGIC %md ### Transformations in Structured Streaming
+
+# COMMAND ----------
+
 from pyspark.sql.functions import col, sum
 
 df_transformed = (
@@ -93,6 +116,10 @@ df_transformed = (
       .where("final_price IS NOT NULL")
       .drop('payload', 'payment_info'))
 )
+
+# COMMAND ----------
+
+# MAGIC %md ### Writing Data to Streaming Sinks
 
 # COMMAND ----------
 
@@ -126,12 +153,19 @@ for stream in spark.streams.active:
 
 # COMMAND ----------
 
+# MAGIC %md ### Schema Inference and Evolution on Streaming
+
+# COMMAND ----------
+
+schemaLocation = '/Volumes/workspace/default/chapter_07/autoloader/test_1'
+# dbutils.fs.rm(schemaLocation, True)
+
 autoLoaderDf = (
     spark.readStream
          .format('CloudFiles')
          .option('cloudFiles.maxFilesPerTrigger', 1)
          .option('cloudFiles.format', 'json')
-         .option('cloudFiles.schemaLocation', '/Volumes/workspace/default/chapter_07/autoloader/test_1')
+         .option('cloudFiles.schemaLocation', schemaLocation)
          .option('cloudFiles.schemaEvolutionMode', 'addNewColumns')
          .option('cloudFiles.inferColumnTypes', True)
          .load(stream_path)

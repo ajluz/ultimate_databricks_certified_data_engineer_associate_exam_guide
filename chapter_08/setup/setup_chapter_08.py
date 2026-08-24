@@ -8,20 +8,18 @@
 # MAGIC import os
 # MAGIC import decimal
 # MAGIC
+# MAGIC # def drop_tables():
+# MAGIC #     tables = [
+# MAGIC #         ""
+# MAGIC #     ]
+# MAGIC #     for table in tables:
+# MAGIC #         spark.sql(f"DROP TABLE IF EXISTS {table}")
+# MAGIC
 # MAGIC def drop_volume(chapter_number: str):
 # MAGIC     spark.sql(f"drop volume if exists workspace.default.chapter_{chapter_number}")
 # MAGIC
 # MAGIC def create_volume(chapter_number: str):
 # MAGIC     spark.sql(f"create volume if not exists workspace.default.chapter_{chapter_number}")
-# MAGIC
-# MAGIC def drop_delta_example_table():
-# MAGIC     spark.sql(f"DROP TABLE IF EXISTS workspace.default.tb_api_stream_data")
-# MAGIC
-# MAGIC def cleanup_resources():
-# MAGIC     for stream in spark.streams.active:
-# MAGIC         stream.stop()
-# MAGIC     drop_volume("07")
-# MAGIC     spark.sql("DROP TABLE IF EXISTS workspace.default.tb_api_stream_data")
 # MAGIC
 # MAGIC def generate_and_write_to_volume(
 # MAGIC     chapter_number: str,
