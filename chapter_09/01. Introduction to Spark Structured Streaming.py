@@ -174,3 +174,4 @@ autoLoaderDf = (
 # COMMAND ----------
 
 cleanup_resources()
+

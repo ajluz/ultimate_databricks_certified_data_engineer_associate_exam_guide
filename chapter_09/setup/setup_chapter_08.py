@@ -409,3 +409,4 @@ spark.conf.set("spark.sql.shuffle.partitions", 5)
 
 spark.sql("USE CATALOG workspace")
 spark.sql("USE SCHEMA default")
+
