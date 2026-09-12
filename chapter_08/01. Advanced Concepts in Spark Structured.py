@@ -193,14 +193,25 @@ spark.sql("""
 
 # COMMAND ----------
 
+spark.sql("""
+	  CREATE OR REPLACE TABLE tb_api_stream_sample AS
+	  SELECT *
+	  FROM tb_api_stream_data
+	  WHERE access_point IN ('chrome', 'firefox')
+	  LIMIT 10000
+""")
+
+# COMMAND ----------
+
 from pyspark.sql.functions import col, expr
 
 checkpointLocation = "/Volumes/workspace/default/chapter_08/api_stream_data/_checkpoint/stream_stream_join"
 
+# dbutils.fs.rm(checkpointLocation, True)
+
 df_web = (
   spark.readStream
-    .table("tb_api_stream_data")
-    .where(col("access_point").isin("chrome", "firefox"))
+    .table("tb_api_stream_sample")
     .select(
       col("ip_address").alias("web_ip"),
       col("access_date").cast("timestamp").alias("web_time")
@@ -210,11 +221,10 @@ df_web = (
 
 df_mobile = (
   spark.readStream
-    .table("tb_api_stream_data")
-    .where(col("access_point") == "iphone")
+    .table("tb_api_stream_sample")
     .select(
       col("ip_address").alias("mobile_ip"),
-      col("access_date").cast("timestamp").alias("mobile_time")
+      (col("access_date").cast("timestamp") + expr("INTERVAL 15 MINUTES")).alias("mobile_time")
     )
     .withWatermark("mobile_time", "30 minutes")
 )
@@ -238,37 +248,70 @@ df_joined = (
 
 # COMMAND ----------
 
-# MAGIC %sql 
-# MAGIC SELECT *
-# MAGIC FROM tb_api_stream_data
-# MAGIC WHERE ip_address IN (
-# MAGIC '198.107.154.148',
-# MAGIC '67.78.202.180',
-# MAGIC '46.126.76.174',
-# MAGIC '203.248.48.74',
-# MAGIC '201.35.63.48',
-# MAGIC '66.206.8.79',
-# MAGIC '45.104.0.229',
-# MAGIC '224.230.186.238',
-# MAGIC '87.190.8.253',
-# MAGIC '197.122.74.55',
-# MAGIC '78.100.158.188',
-# MAGIC '176.178.241.145',
-# MAGIC '108.10.32.158',
-# MAGIC '139.168.53.20',
-# MAGIC '27.41.94.120'
-# MAGIC )
-# MAGIC ORDER BY ip_address
-# MAGIC -- GROUP BY ip_address
-# MAGIC -- HAVING COUNT(*) > 1
+spark.sql("SELECT * FROM stream_stream_join LIMIT 5").show()
 
 # COMMAND ----------
 
-	spark.sql("""
-	  SELECT *
-	  FROM stream_stream_join
-	  LIMIT 5
-	""").show()
+# MAGIC %md ### Dropping Duplicates On Streaming
+
+# COMMAND ----------
+
+# Example 1 = dropDuplicates with the event time among the keys
+# df_deduplicated = (
+#   df_orders
+#       .withWatermark("order_time", "10 minutes")
+#       .dropDuplicates(["order_id", "order_time"])
+# )
+
+# COMMAND ----------
+
+# Example 2 = dropDuplicatesWithinWatermark
+# df_deduplicated = (
+#   df_orders
+#       .withWatermark("order_time", "10 minutes")
+#       .dropDuplicatesWithinWatermark(["order_id"])
+# )
+
+# COMMAND ----------
+
+# MAGIC %md ### Using UDFs in Streaming Pipelines
+
+# COMMAND ----------
+
+checkpointLocation = "/Volumes/workspace/default/chapter_08/api_stream_data/_checkpoint/udf_example"
+
+dbutils.fs.rm(checkpointLocation, True)
+
+df_api_stream_data = (
+  spark.readStream
+    .table("tb_api_stream_data")
+)
+
+df_purchases = (
+  df_api_stream_data
+    .where("payload.payment_info.discount IS NOT NULL")
+    .selectExpr(
+      "payload.product_info.product_name AS product_name",
+      "CAST(replace(payload.product_info.price, '$ ', '') AS DECIMAL(9,2)) AS price",
+      "payload.payment_info.discount AS discount"
+    )
+	)
+
+df_discounted = (
+  df_purchases
+    .selectExpr("*","calculate_discount(price, discount) AS final_price")
+    .writeStream
+    .format("memory")
+    .option("checkpointLocation",checkpointLocation)
+    .trigger(availableNow=True)
+    .outputMode("append")
+    .queryName("udf_example")
+    .start()
+)
+
+# COMMAND ----------
+
+spark.sql("SELECT * FROM udf_example LIMIT 5").show()
 
 # COMMAND ----------
 
