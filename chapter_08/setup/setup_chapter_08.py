@@ -32,6 +32,7 @@
 # MAGIC     target_files: int = 100,
 # MAGIC     target_file_size_bytes: int = 10485760,
 # MAGIC     sample_rows: int = 10000,
+# MAGIC     mobile_followup_fraction: float = 0.25,
 # MAGIC     ):
 # MAGIC
 # MAGIC     drop_volume(chapter_number)
@@ -390,6 +391,26 @@
 # MAGIC     total_rows = max(total_rows, target_files * 1000)
 # MAGIC
 # MAGIC     df = _build_df(total_rows)
+# MAGIC
+# MAGIC     # Chapter 08 cross-device follow-ups: a fraction of the web accesses
+# MAGIC     # (chrome/firefox) gets a correlated mobile access from the same
+# MAGIC     # ip_address 5-40 minutes later, so stream-stream interval joins
+# MAGIC     # find real matches. Set mobile_followup_fraction=0 to disable.
+# MAGIC     if mobile_followup_fraction and mobile_followup_fraction > 0:
+# MAGIC         df_followup = (
+# MAGIC             df.filter(F.col("access_point").isin("chrome", "firefox"))
+# MAGIC               .sample(fraction=mobile_followup_fraction, seed=42)
+# MAGIC               .withColumn(
+# MAGIC                   "access_date",
+# MAGIC                   F.expr("timestampadd(MINUTE, cast(rand() * 35 + 5 as int), access_date)")
+# MAGIC               )
+# MAGIC               .withColumn(
+# MAGIC                   "access_point",
+# MAGIC                   F.when(F.rand(seed=7) < 0.7, F.lit("iphone")).otherwise(F.lit("android"))
+# MAGIC               )
+# MAGIC         )
+# MAGIC         df = df.unionByName(df_followup)
+# MAGIC
 # MAGIC     output_path = f"/Volumes/workspace/default/chapter_{chapter_number}/api_stream_data"
 # MAGIC
 # MAGIC     (df.repartition(target_files)
