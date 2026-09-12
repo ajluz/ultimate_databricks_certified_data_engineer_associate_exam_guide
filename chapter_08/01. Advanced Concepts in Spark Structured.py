@@ -13,6 +13,7 @@
 # COMMAND ----------
 
 generate_and_write_to_volume("08")
+generate_and_write_to_tables("08")
 
 # COMMAND ----------
 
@@ -127,57 +128,147 @@ df_session_win = (
 
 # COMMAND ----------
 
-# MAGIC %md ### Writing Data to Streaming Sinks
+# MAGIC %md ### Watermarks to Handle Late Data
 
 # COMMAND ----------
 
-checkpointLocation = "/Volumes/workspace/default/chapter_07/_checkpoint/transformation_1"
+df_tumbling_win = (
+  df_stream
+  	.withWatermark("access_date", "10 minutes")
+		.groupBy(window("access_date", "10 minutes"))
+		.count()
+)
+
+# COMMAND ----------
+
+# MAGIC %md ### Stream-Static Joins
+
+# COMMAND ----------
+
+from pyspark.sql.functions import col
+
+checkpointLocation = "/Volumes/workspace/default/chapter_08/api_stream_data/_checkpoint/stream_static_join"
+
 # dbutils.fs.rm(checkpointLocation, True)
 
-(
-  df_transformed.writeStream
-      .format("memory")
-      .option("checkpointLocation",checkpointLocation)
-      .trigger(availableNow=True)
-      .outputMode("append")
-      .queryName("transformation_1")
-      .start()
-).awaitTermination()
+df_api_stream_data = (
+  spark.readStream
+		.table("tb_api_stream_data")
+	)
+
+df_products = spark.read.table("products")
+
+df_enriched = (
+  df_api_stream_data
+		.withColumn("product_name", col("payload.product_info.product_name"))
+	  .join(df_products, "product_name")
+		.select(
+     	df_api_stream_data.access_date, 
+      df_api_stream_data.ip_address, 
+      df_api_stream_data.access_point,
+      df_products.product_id,
+      df_products.product_name,
+      df_products.level
+    )
+    .writeStream
+    .format("memory")
+    .option("checkpointLocation",checkpointLocation)
+    .trigger(availableNow=True)
+    .outputMode("append")
+    .queryName("stream_static_join")
+    .start()
+)
 
 # COMMAND ----------
 
 spark.sql("""
-  SELECT
-    access_date,
-    access_point,
-    ip_address
-  FROM transformation_1 LIMIT 5
+  SELECT *
+  FROM stream_static_join
+  LIMIT 5
 """).show()
 
 # COMMAND ----------
 
-for stream in spark.streams.active:
-    print(stream.lastProgress)
+# MAGIC %md ### Stream-Stream Joins
 
 # COMMAND ----------
 
-# MAGIC %md ### Schema Inference and Evolution on Streaming
+from pyspark.sql.functions import col, expr
 
-# COMMAND ----------
+checkpointLocation = "/Volumes/workspace/default/chapter_08/api_stream_data/_checkpoint/stream_stream_join"
 
-schemaLocation = '/Volumes/workspace/default/chapter_07/autoloader/test_1'
-# dbutils.fs.rm(schemaLocation, True)
-
-autoLoaderDf = (
-    spark.readStream
-         .format('CloudFiles')
-         .option('cloudFiles.maxFilesPerTrigger', 1)
-         .option('cloudFiles.format', 'json')
-         .option('cloudFiles.schemaLocation', schemaLocation)
-         .option('cloudFiles.schemaEvolutionMode', 'addNewColumns')
-         .option('cloudFiles.inferColumnTypes', True)
-         .load(stream_path)
+df_web = (
+  spark.readStream
+    .table("tb_api_stream_data")
+    .where(col("access_point").isin("chrome", "firefox"))
+    .select(
+      col("ip_address").alias("web_ip"),
+      col("access_date").cast("timestamp").alias("web_time")
+    )
+    .withWatermark("web_time", "30 minutes")
 )
+
+df_mobile = (
+  spark.readStream
+    .table("tb_api_stream_data")
+    .where(col("access_point") == "iphone")
+    .select(
+      col("ip_address").alias("mobile_ip"),
+      col("access_date").cast("timestamp").alias("mobile_time")
+    )
+    .withWatermark("mobile_time", "30 minutes")
+)
+
+df_joined = (
+  df_web.join(
+    df_mobile,
+    expr("""
+      web_ip = mobile_ip AND
+      mobile_time BETWEEN web_time AND web_time + INTERVAL 1 HOUR
+    """)
+  )
+  .writeStream
+  .format("memory")
+  .option("checkpointLocation",checkpointLocation)
+  .trigger(availableNow=True)
+  .outputMode("append")
+  .queryName("stream_stream_join")
+  .start()
+)
+
+# COMMAND ----------
+
+# MAGIC %sql 
+# MAGIC SELECT *
+# MAGIC FROM tb_api_stream_data
+# MAGIC WHERE ip_address IN (
+# MAGIC '198.107.154.148',
+# MAGIC '67.78.202.180',
+# MAGIC '46.126.76.174',
+# MAGIC '203.248.48.74',
+# MAGIC '201.35.63.48',
+# MAGIC '66.206.8.79',
+# MAGIC '45.104.0.229',
+# MAGIC '224.230.186.238',
+# MAGIC '87.190.8.253',
+# MAGIC '197.122.74.55',
+# MAGIC '78.100.158.188',
+# MAGIC '176.178.241.145',
+# MAGIC '108.10.32.158',
+# MAGIC '139.168.53.20',
+# MAGIC '27.41.94.120'
+# MAGIC )
+# MAGIC ORDER BY ip_address
+# MAGIC -- GROUP BY ip_address
+# MAGIC -- HAVING COUNT(*) > 1
+
+# COMMAND ----------
+
+	spark.sql("""
+	  SELECT *
+	  FROM stream_stream_join
+	  LIMIT 5
+	""").show()
 
 # COMMAND ----------
 
