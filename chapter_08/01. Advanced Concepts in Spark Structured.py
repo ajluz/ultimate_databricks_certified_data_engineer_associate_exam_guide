@@ -181,11 +181,7 @@ df_enriched = (
 
 # COMMAND ----------
 
-spark.sql("""
-  SELECT *
-  FROM stream_static_join
-  LIMIT 5
-""").show()
+spark.sql("SELECT * FROM stream_static_join LIMIT 5").show()
 
 # COMMAND ----------
 
