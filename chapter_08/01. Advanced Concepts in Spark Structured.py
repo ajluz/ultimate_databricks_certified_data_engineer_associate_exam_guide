@@ -181,7 +181,16 @@ df_enriched = (
 
 # COMMAND ----------
 
-spark.sql("SELECT * FROM stream_static_join LIMIT 5").show()
+spark.sql("""
+  SELECT 
+    ip_address, 
+    access_point, 
+    product_id, 
+    product_name, 
+    level
+  FROM stream_static_join 
+  LIMIT 6
+""").show()
 
 # COMMAND ----------
 
