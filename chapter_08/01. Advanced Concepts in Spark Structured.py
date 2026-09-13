@@ -256,21 +256,24 @@ spark.sql("SELECT * FROM stream_stream_join LIMIT 5").show()
 
 # COMMAND ----------
 
-# Example 1 = dropDuplicates with the event time among the keys
-# df_deduplicated = (
-#   df_orders
-#       .withWatermark("order_time", "10 minutes")
-#       .dropDuplicates(["order_id", "order_time"])
-# )
+df_orders = (
+	spark.readStream
+	  .table("orders")
+)
+
+df_deduplicated = (
+  df_orders
+    .withWatermark("order_date", "10 minutes")
+    .dropDuplicates(["order_id", "order_date"])
+)
 
 # COMMAND ----------
 
-# Example 2 = dropDuplicatesWithinWatermark
-# df_deduplicated = (
-#   df_orders
-#       .withWatermark("order_time", "10 minutes")
-#       .dropDuplicatesWithinWatermark(["order_id"])
-# )
+df_deduplicated = (
+  df_orders
+    .withWatermark("order_date", "10 minutes")
+    .dropDuplicatesWithinWatermark(["order_id"])
+)
 
 # COMMAND ----------
 
@@ -315,4 +318,4 @@ spark.sql("SELECT * FROM udf_example LIMIT 5").show()
 
 # COMMAND ----------
 
-cleanup_resources()
+cleanup_all_resources()

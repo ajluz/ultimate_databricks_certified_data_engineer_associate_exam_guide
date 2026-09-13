@@ -694,3 +694,41 @@ spark.sql("""
     RETURNS DECIMAL(9,2)
         RETURN CAST(value * (1 - discount) AS decimal(9,2))
 """)
+
+# COMMAND ----------
+
+def cleanup_all_resources():
+    """
+    Cleanup all resources created by this notebook:
+    - Stop all active streams
+    - Drop volume chapter_08
+    - Drop all tables (users, orders, order_details, products, tb_api_stream_data)
+    """
+    # Stop all active streaming queries
+    for stream in spark.streams.active:
+        print(f"Stopping stream: {stream.name if stream.name else stream.id}")
+        stream.stop()
+    
+    # Drop volume
+    print("Dropping volume: workspace.default.chapter_08")
+    spark.sql("DROP VOLUME IF EXISTS workspace.default.chapter_08")
+
+    # Drop function 
+    print("Dropping function: workspace.default.calculate_discount")
+    spark.sql("DROP FUNCTION IF EXISTS calculate_discount")
+    
+    # Drop all tables
+    tables = [
+        "workspace.default.tb_api_stream_data",
+        "workspace.default.tb_api_stream_sample",
+        "workspace.default.users",
+        "workspace.default.orders",
+        "workspace.default.order_details",
+        "workspace.default.products"
+    ]
+    
+    for table in tables:
+        print(f"Dropping table: {table}")
+        spark.sql(f"DROP TABLE IF EXISTS {table}")
+    
+    print("\nAll resources cleaned up successfully!")
