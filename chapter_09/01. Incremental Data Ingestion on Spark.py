@@ -79,6 +79,123 @@ schema = static.schema
 
 # COMMAND ----------
 
+# MAGIC %md ### Insert-Only MERGE with Duplicated IP Addresses
+
+# COMMAND ----------
+
+stream_path = generate_ip_access_files(chapter_number="09")
+ip_schema = "access_date TIMESTAMP, ip_address STRING, access_point STRING"
+
+# COMMAND ----------
+
+# MAGIC %md #### Without MERGE: dropDuplicates per micro-batch, append to the table
+
+# COMMAND ----------
+
+spark.sql("""
+  CREATE OR REPLACE TABLE tb_ip_address_append (
+    access_date TIMESTAMP,
+    ip_address STRING,
+    access_point STRING
+  )
+""")
+
+def append_ips(df_batch, batch_id):
+  (
+    df_batch
+      .dropDuplicates(["ip_address"])
+      .write
+      .mode("append")
+      .saveAsTable("tb_ip_address_append")
+  )
+
+checkpointLocation = "/Volumes/workspace/default/chapter_09/_checkpoint/ip_address_append"
+dbutils.fs.rm(checkpointLocation, True)
+
+(
+  spark.readStream
+    .format("json")
+    .schema(ip_schema)
+    .option("maxFilesPerTrigger", 1)
+    .load(stream_path)
+    .writeStream
+    .foreachBatch(append_ips)
+    .option("checkpointLocation", checkpointLocation)
+    .trigger(availableNow=True)
+    .start()
+).awaitTermination()
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC SELECT ip_address, COUNT(*) AS copies
+# MAGIC FROM tb_ip_address_append
+# MAGIC GROUP BY ip_address
+# MAGIC HAVING COUNT(*) > 1
+# MAGIC ORDER BY copies DESC
+
+# COMMAND ----------
+
+# MAGIC %md #### With insert-only MERGE: dropDuplicates per micro-batch, MERGE against the table
+
+# COMMAND ----------
+
+spark.sql("""
+  CREATE OR REPLACE TABLE tb_ip_address (
+    access_date TIMESTAMP,
+    ip_address STRING,
+    access_point STRING
+  )
+""")
+
+def insert_new_ips(df_batch, batch_id):
+  df_ips = df_batch.dropDuplicates(["ip_address"])
+
+  df_ips.createOrReplaceTempView("ip_updates")
+
+  df_batch.sparkSession.sql("""
+    MERGE INTO tb_ip_address AS target
+    USING ip_updates AS source
+    ON target.ip_address = source.ip_address
+    WHEN NOT MATCHED THEN INSERT *
+  """)
+
+checkpointLocation = "/Volumes/workspace/default/chapter_09/_checkpoint/ip_address"
+dbutils.fs.rm(checkpointLocation, True)
+
+(
+  spark.readStream
+    .format("json")
+    .schema(ip_schema)
+    .option("maxFilesPerTrigger", 1)
+    .load(stream_path)
+    .writeStream
+    .foreachBatch(insert_new_ips)
+    .option("checkpointLocation", checkpointLocation)
+    .trigger(availableNow=True)
+    .start()
+).awaitTermination()
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC SELECT ip_address, COUNT(*) AS copies
+# MAGIC FROM tb_ip_address
+# MAGIC GROUP BY ip_address
+# MAGIC HAVING COUNT(*) > 1
+
+# COMMAND ----------
+
+spark.sql(f"""
+  SELECT
+    (SELECT COUNT(*) FROM json.`{stream_path}`) AS rows_in_files,
+    (SELECT COUNT(DISTINCT ip_address) FROM json.`{stream_path}`) AS distinct_ips_in_files,
+    (SELECT COUNT(*) FROM tb_ip_address_append) AS rows_append_only,
+    (SELECT COUNT(*) FROM tb_ip_address) AS rows_insert_only_merge
+""").show()
+
+# COMMAND ----------
+
 # MAGIC %md ### Tumbling Window
 
 # COMMAND ----------

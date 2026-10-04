@@ -710,6 +710,8 @@ def cleanup_all_resources():
     tables = [
         "workspace.default.tb_api_stream_data",
         "workspace.default.tb_api_stream_sample",
+        "workspace.default.tb_ip_address",
+        "workspace.default.tb_ip_address_append",
         "workspace.default.users",
         "workspace.default.orders",
         "workspace.default.order_details",
@@ -721,6 +723,77 @@ def cleanup_all_resources():
         spark.sql(f"DROP TABLE IF EXISTS {table}")
     
     print("\nAll resources cleaned up successfully!")
+
+# COMMAND ----------
+
+def generate_ip_access_files(
+    chapter_number: str = "09",
+    deliveries: int = 10,
+    rows_per_delivery: int = 1000,
+    distinct_ips: int = 2000,
+    resend_rate: float = 0.1,
+    seed: int = 42,
+    ):
+    """
+    Writes one JSON file per delivery into chapter_<n>/ip_access_data, with
+    duplicated ip_address values on purpose:
+    - inside a delivery: a fraction of the rows (resend_rate) is sent twice,
+      and the same address can be drawn more than once;
+    - across deliveries: every delivery draws from the same pool of
+      distinct_ips addresses, so the same ip_address returns in later files.
+    Each file becomes one micro-batch when read with maxFilesPerTrigger = 1.
+    """
+    from pyspark.sql import functions as F
+    from datetime import datetime, timezone
+
+    create_volume(chapter_number)
+    output_path = f"/Volumes/workspace/default/chapter_{chapter_number}/ip_access_data"
+    dbutils.fs.rm(output_path, True)
+
+    access_points = ['iphone','android','chrome','safari','firefox','unknown']
+    access_point_array = F.array(*[F.lit(a) for a in access_points])
+    base_epoch = int(datetime(2026, 7, 1, tzinfo=timezone.utc).timestamp())
+
+    def _octet(n: int):
+        return F.pmod(F.xxhash64(F.col("ip_id"), F.lit(seed + n)), F.lit(254)) + 1
+
+    for delivery in range(deliveries):
+        df_delivery = (
+            spark.range(rows_per_delivery)
+                .withColumn("ip_id", F.pmod(F.xxhash64("id", F.lit(delivery), F.lit(seed)), F.lit(distinct_ips)))
+                .withColumn("ip_address", F.format_string("%d.%d.%d.%d", _octet(1), _octet(2), _octet(3), _octet(4)))
+                .withColumn(
+                    "access_date",
+                    F.timestamp_seconds(
+                        F.lit(base_epoch + delivery * 3600)
+                        + F.pmod(F.xxhash64("id", F.lit(delivery), F.lit(seed + 10)), F.lit(3600))
+                    )
+                )
+                .withColumn(
+                    "access_point",
+                    F.element_at(
+                        access_point_array,
+                        (F.pmod(F.xxhash64("id", F.lit(delivery), F.lit(seed + 20)), F.lit(len(access_points))) + 1).cast("int")
+                    )
+                )
+                .select("access_date", "ip_address", "access_point")
+        )
+
+        df_resent = df_delivery.sample(fraction=resend_rate, seed=seed + delivery)
+
+        (df_delivery.unionByName(df_resent)
+            .repartition(1)
+            .sortWithinPartitions("access_date")
+            .write
+            .mode("append")
+            .json(output_path))
+
+    df_files = spark.read.schema("access_date TIMESTAMP, ip_address STRING, access_point STRING").json(output_path)
+    print(f"Files written:         {deliveries}")
+    print(f"Rows in the files:     {df_files.count()}")
+    print(f"Distinct ip_address:   {df_files.select('ip_address').distinct().count()}")
+
+    return output_path
 
 # COMMAND ----------
 
