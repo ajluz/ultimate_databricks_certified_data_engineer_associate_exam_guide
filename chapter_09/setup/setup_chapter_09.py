@@ -10,6 +10,7 @@
 # MAGIC from pyspark.sql.window import Window
 # MAGIC from pyspark.sql.types import *
 # MAGIC import os
+# MAGIC import builtins
 # MAGIC import decimal
 # MAGIC from datetime import datetime, timezone
 # MAGIC
@@ -86,7 +87,7 @@
 # MAGIC
 # MAGIC     # generate_ip_access_files()
 # MAGIC
-# MAGIC     target_files = max(50, min(120, target_files))
+# MAGIC     target_files = builtins.max(50, builtins.min(120, target_files))
 # MAGIC
 # MAGIC     countries = [
 # MAGIC         ("US","United States"), ("BR","Brazil"), ("IN","India"), ("GB","United Kingdom"),
@@ -430,13 +431,13 @@
 # MAGIC
 # MAGIC         return df_test.build().drop('id')
 # MAGIC
-# MAGIC     sample_rows = max(1000, sample_rows)
+# MAGIC     sample_rows = builtins.max(1000, sample_rows)
 # MAGIC     sample_df = _build_df(sample_rows)
 # MAGIC     avg_row_size = sample_df.select(F.avg(F.length(F.to_json(F.struct(*sample_df.columns))))).collect()[0][0]
 # MAGIC     avg_row_size = avg_row_size if avg_row_size and avg_row_size > 0 else 1
 # MAGIC
 # MAGIC     total_rows = int((target_files * target_file_size_bytes) / avg_row_size)
-# MAGIC     total_rows = max(total_rows, target_files * 1000)
+# MAGIC     total_rows = builtins.max(total_rows, target_files * 1000)
 # MAGIC
 # MAGIC     df = _build_df(total_rows)
 # MAGIC     output_path = f"/Volumes/workspace/default/chapter_{chapter_number}/api_stream_data"
