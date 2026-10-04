@@ -23,57 +23,57 @@
 # MAGIC def drop_delta_example_table():
 # MAGIC     spark.sql(f"DROP TABLE IF EXISTS workspace.default.tb_api_stream_data")
 # MAGIC
-# MAGIC # def generate_ip_access_files(
-# MAGIC #     chapter_number: str = "09",
-# MAGIC #     deliveries: int = 10,
-# MAGIC #     rows_per_delivery: int = 1000,
-# MAGIC #     distinct_ips: int = 2000,
-# MAGIC #     resend_rate: float = 0.1,
-# MAGIC #     seed: int = 42,
-# MAGIC #     ):
+# MAGIC def generate_ip_access_files(
+# MAGIC     chapter_number: str,
+# MAGIC     deliveries: int = 10,
+# MAGIC     rows_per_delivery: int = 1000,
+# MAGIC     distinct_ips: int = 2000,
+# MAGIC     resend_rate: float = 0.1,
+# MAGIC     seed: int = 42,
+# MAGIC     ):
 # MAGIC     
-# MAGIC #     output_path = f"/Volumes/workspace/default/chapter_{chapter_number}/ip_access_data"
-# MAGIC #     dbutils.fs.rm(output_path, True)
+# MAGIC     output_path = f"/Volumes/workspace/default/chapter_{chapter_number}/ip_access_data"
+# MAGIC     dbutils.fs.rm(output_path, True)
 # MAGIC
-# MAGIC #     access_points = ['iphone','android','chrome','safari','firefox','unknown']
-# MAGIC #     access_point_array = F.array(*[F.lit(a) for a in access_points])
-# MAGIC #     base_epoch = int(datetime(2026, 7, 1, tzinfo=timezone.utc).timestamp())
+# MAGIC     access_points = ['iphone','android','chrome','safari','firefox','unknown']
+# MAGIC     access_point_array = F.array(*[F.lit(a) for a in access_points])
+# MAGIC     base_epoch = int(datetime(2026, 7, 1, tzinfo=timezone.utc).timestamp())
 # MAGIC
-# MAGIC #     def _octet(n: int):
-# MAGIC #         return F.pmod(F.xxhash64(F.col("ip_id"), F.lit(seed + n)), F.lit(254)) + 1
+# MAGIC     def _octet(n: int):
+# MAGIC         return F.pmod(F.xxhash64(F.col("ip_id"), F.lit(seed + n)), F.lit(254)) + 1
 # MAGIC
-# MAGIC #     for delivery in range(deliveries):
-# MAGIC #         df_delivery = (
-# MAGIC #             spark.range(rows_per_delivery)
-# MAGIC #                 .withColumn("ip_id", F.pmod(F.xxhash64("id", F.lit(delivery), F.lit(seed)), F.lit(distinct_ips)))
-# MAGIC #                 .withColumn("ip_address", F.format_string("%d.%d.%d.%d", _octet(1), _octet(2), _octet(3), _octet(4)))
-# MAGIC #                 .withColumn(
-# MAGIC #                     "access_date",
-# MAGIC #                     F.timestamp_seconds(
-# MAGIC #                         F.lit(base_epoch + delivery * 3600)
-# MAGIC #                         + F.pmod(F.xxhash64("id", F.lit(delivery), F.lit(seed + 10)), F.lit(3600))
-# MAGIC #                     )
-# MAGIC #                 )
-# MAGIC #                 .withColumn(
-# MAGIC #                     "access_point",
-# MAGIC #                     F.element_at(
-# MAGIC #                         access_point_array,
-# MAGIC #                         (F.pmod(F.xxhash64("id", F.lit(delivery), F.lit(seed + 20)), F.lit(len(access_points))) + 1).cast("int")
-# MAGIC #                     )
-# MAGIC #                 )
-# MAGIC #                 .select("access_date", "ip_address", "access_point")
-# MAGIC #         )
+# MAGIC     for delivery in range(deliveries):
+# MAGIC         df_delivery = (
+# MAGIC             spark.range(rows_per_delivery)
+# MAGIC                 .withColumn("ip_id", F.pmod(F.xxhash64("id", F.lit(delivery), F.lit(seed)), F.lit(distinct_ips)))
+# MAGIC                 .withColumn("ip_address", F.format_string("%d.%d.%d.%d", _octet(1), _octet(2), _octet(3), _octet(4)))
+# MAGIC                 .withColumn(
+# MAGIC                     "access_date",
+# MAGIC                     F.timestamp_seconds(
+# MAGIC                         F.lit(base_epoch + delivery * 3600)
+# MAGIC                         + F.pmod(F.xxhash64("id", F.lit(delivery), F.lit(seed + 10)), F.lit(3600))
+# MAGIC                     )
+# MAGIC                 )
+# MAGIC                 .withColumn(
+# MAGIC                     "access_point",
+# MAGIC                     F.element_at(
+# MAGIC                         access_point_array,
+# MAGIC                         (F.pmod(F.xxhash64("id", F.lit(delivery), F.lit(seed + 20)), F.lit(len(access_points))) + 1).cast("int")
+# MAGIC                     )
+# MAGIC                 )
+# MAGIC                 .select("access_date", "ip_address", "access_point")
+# MAGIC         )
 # MAGIC
-# MAGIC #         df_resent = df_delivery.sample(fraction=resend_rate, seed=seed + delivery)
+# MAGIC         df_resent = df_delivery.sample(fraction=resend_rate, seed=seed + delivery)
 # MAGIC
-# MAGIC #         (df_delivery.unionByName(df_resent)
-# MAGIC #             .repartition(1)
-# MAGIC #             .sortWithinPartitions("access_date")
-# MAGIC #             .write
-# MAGIC #             .mode("append")
-# MAGIC #             .json(output_path))
+# MAGIC         (df_delivery.unionByName(df_resent)
+# MAGIC             .repartition(1)
+# MAGIC             .sortWithinPartitions("access_date")
+# MAGIC             .write
+# MAGIC             .mode("append")
+# MAGIC             .json(output_path))
 # MAGIC
-# MAGIC #     df_files = spark.read.schema("access_date TIMESTAMP, ip_address STRING, access_point STRING").json(output_path)
+# MAGIC     df_files = spark.read.schema("access_date TIMESTAMP, ip_address STRING, access_point STRING").json(output_path)
 # MAGIC
 # MAGIC def generate_and_write_to_volume(
 # MAGIC     chapter_number: str,
@@ -85,7 +85,7 @@
 # MAGIC     drop_volume(chapter_number)
 # MAGIC     create_volume(chapter_number)
 # MAGIC
-# MAGIC     # generate_ip_access_files()
+# MAGIC     generate_ip_access_files(chapter_number)
 # MAGIC
 # MAGIC     target_files = builtins.max(50, builtins.min(120, target_files))
 # MAGIC
@@ -727,7 +727,7 @@
 
 # COMMAND ----------
 
-spark.conf.set("spark.sql.shuffle.partitions", 200)
+spark.conf.set("spark.sql.shuffle.partitions", 1)
 
 # COMMAND ----------
 

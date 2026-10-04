@@ -16,62 +16,100 @@ generate_and_write_to_volume("09")
 
 # COMMAND ----------
 
-spark.sql("SELECT COUNT(*) FROM users").show()
-spark.sql("SELECT * FROM users LIMIT 5").show()
+stream_path = "/Volumes/workspace/default/chapter_09/ip_access_data/"
+
+schema = spark.read.json(stream_path).schema
+
+df_stream_ips = (
+    spark.readStream
+         .format("json")
+         .schema(schema)
+         .option('maxFilesPerTrigger', 1)
+         .load(stream_path)
+)
 
 # COMMAND ----------
 
-from pyspark.sql.functions import col, sha2, current_timestamp
+spark.read.json("/Volumes/workspace/default/chapter_09/ip_access_data/").createOrReplaceTempView("ips")
 
-def foreach_batch(batch_df, epoch_id):
-  batch_df.persist()
+spark.sql("""
+  SELECT
+    ip_address,
+    COUNT(*) AS qty_duplicated_ipd
+  FROM ips
+  GROUP BY ip_address
+  HAVING COUNT(*) > 1
+  ORDER BY qty_duplicated_ipd DESC
+""").show(10)
 
-  batch_df = (
-    batch_df
-      .where("payload.user_info IS NOT NULL")
-      .select(
-        col("payload.user_info.user_name").alias("user_name"),
-        col("payload.user_info.user_email").alias("user_email"),
-        col("payload.user_info.user_company").alias("user_company")
-      ).withColumn("user_uuid", sha2(col("user_email"), 256))
-      .withColumn("load_date", current_timestamp())
-      .dropDuplicates(["user_name"])
-  )
+# COMMAND ----------
 
-  batch_df.createOrReplaceTempView("view")
-
-  query = """
-      MERGE INTO workspace.defalt.users AS t
-      USING (SELECT * FROM view) AS s
-      ON t.user_uuid = s.user_uuid
-      WHEN NOT MATCHED THEN INSERT *
-    """
-
-  spark.sql(query)
-  batch_df.unpersist()
+dbutils.fs.rm("/Volumes/workspace/default/chapter_09/ip_access_data/_checkpoint/example_stream_deduplication_1",True)
 
 from pyspark.sql.functions import window, col, date_format
 
-stream_path = "/Volumes/workspace/default/chapter_09/api_stream_data/"
-checkpointLocation = "/Volumes/workspace/default/chapter_09/api_stream_data/_checkpoint/insert_only_merge"
-dbutils.fs.rm(checkpointLocation,True)
+checkpointLocation = "/Volumes/workspace/default/chapter_09/ip_access_data/_checkpoint/example_stream_deduplication_1"
 
-static = spark.read.json(stream_path)
-schema = static.schema
-# print(schema)
-
-(
-  spark
-    .readStream
-    .format("json")
-    .schema(schema)
-    .load(stream_path)
+deduplication_at_read = (
+  df_stream_ips
+    .withColumn("access_date", col("access_date").cast("timestamp"))
+    .withWatermark("access_date", "10 seconds")
+    .dropDuplicatesWithinWatermark(["ip_address"])
     .writeStream
-    .foreachBatch(lambda batch_df,epoch_id: foreach_batch)
-    .option("checkpointLocation", checkpointLocation)
+    .format("memory")
+    .option("checkpointLocation",checkpointLocation)
     .trigger(availableNow=True)
+    .outputMode("append")
+    .queryName("drop_duplicates_on_read")
     .start()
 )
+
+# COMMAND ----------
+
+spark.sql("""
+  SELECT
+    ip_address,
+    COUNT(*) AS qty_duplicated_ipd
+  FROM drop_duplicates_on_read
+  GROUP BY ip_address
+  HAVING COUNT(*) > 1
+  ORDER BY qty_duplicated_ipd
+""").show(10)
+
+# COMMAND ----------
+
+from pyspark.sql.functions import col, sha2
+
+def upsert_users(df_batch, batch_id):
+
+	  df_users = (
+	    df_batch
+	      .where("payload.user_info IS NOT NULL")
+	      .select(
+	        col("payload.user_info.user_name").alias("user_name"),
+	        col("payload.user_info.user_email").alias("user_email"),
+	        col("payload.user_info.user_company").alias("user_company")
+	      )
+	      .withColumn("user_uuid", sha2(col("user_email"), 256))
+	      .dropDuplicates(["user_uuid"])
+	  )
+
+	  df_users.createOrReplaceTempView("user_updates")
+
+	  df_batch.sparkSession.sql("""
+	    MERGE INTO user_tb AS target
+	    USING user_updates AS source
+	    ON target.user_uuid = source.user_uuid
+	    WHEN MATCHED THEN
+	      UPDATE SET
+	        target.user_name = source.user_name,
+	        target.user_company = source.user_company,
+	        target.load_date = current_timestamp()
+	    WHEN NOT MATCHED THEN
+	      INSERT (user_uuid, user_name, user_email, user_company, source, load_date)
+	      VALUES (source.user_uuid, source.user_name, source.user_email,
+	              source.user_company, 'API', current_timestamp())
+	  """)
 
 # COMMAND ----------
 
