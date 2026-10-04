@@ -11,6 +11,7 @@
 # MAGIC from pyspark.sql.types import *
 # MAGIC import os
 # MAGIC import decimal
+# MAGIC from datetime import datetime, timezone
 # MAGIC
 # MAGIC def drop_volume(chapter_number: str):
 # MAGIC     spark.sql(f"drop volume if exists workspace.default.chapter_{chapter_number}")
@@ -21,11 +22,57 @@
 # MAGIC def drop_delta_example_table():
 # MAGIC     spark.sql(f"DROP TABLE IF EXISTS workspace.default.tb_api_stream_data")
 # MAGIC
-# MAGIC def cleanup_resources():
-# MAGIC     for stream in spark.streams.active:
-# MAGIC         stream.stop()
-# MAGIC     drop_volume("07")
-# MAGIC     spark.sql("DROP TABLE IF EXISTS workspace.default.tb_api_stream_data")
+# MAGIC # def generate_ip_access_files(
+# MAGIC #     chapter_number: str = "09",
+# MAGIC #     deliveries: int = 10,
+# MAGIC #     rows_per_delivery: int = 1000,
+# MAGIC #     distinct_ips: int = 2000,
+# MAGIC #     resend_rate: float = 0.1,
+# MAGIC #     seed: int = 42,
+# MAGIC #     ):
+# MAGIC     
+# MAGIC #     output_path = f"/Volumes/workspace/default/chapter_{chapter_number}/ip_access_data"
+# MAGIC #     dbutils.fs.rm(output_path, True)
+# MAGIC
+# MAGIC #     access_points = ['iphone','android','chrome','safari','firefox','unknown']
+# MAGIC #     access_point_array = F.array(*[F.lit(a) for a in access_points])
+# MAGIC #     base_epoch = int(datetime(2026, 7, 1, tzinfo=timezone.utc).timestamp())
+# MAGIC
+# MAGIC #     def _octet(n: int):
+# MAGIC #         return F.pmod(F.xxhash64(F.col("ip_id"), F.lit(seed + n)), F.lit(254)) + 1
+# MAGIC
+# MAGIC #     for delivery in range(deliveries):
+# MAGIC #         df_delivery = (
+# MAGIC #             spark.range(rows_per_delivery)
+# MAGIC #                 .withColumn("ip_id", F.pmod(F.xxhash64("id", F.lit(delivery), F.lit(seed)), F.lit(distinct_ips)))
+# MAGIC #                 .withColumn("ip_address", F.format_string("%d.%d.%d.%d", _octet(1), _octet(2), _octet(3), _octet(4)))
+# MAGIC #                 .withColumn(
+# MAGIC #                     "access_date",
+# MAGIC #                     F.timestamp_seconds(
+# MAGIC #                         F.lit(base_epoch + delivery * 3600)
+# MAGIC #                         + F.pmod(F.xxhash64("id", F.lit(delivery), F.lit(seed + 10)), F.lit(3600))
+# MAGIC #                     )
+# MAGIC #                 )
+# MAGIC #                 .withColumn(
+# MAGIC #                     "access_point",
+# MAGIC #                     F.element_at(
+# MAGIC #                         access_point_array,
+# MAGIC #                         (F.pmod(F.xxhash64("id", F.lit(delivery), F.lit(seed + 20)), F.lit(len(access_points))) + 1).cast("int")
+# MAGIC #                     )
+# MAGIC #                 )
+# MAGIC #                 .select("access_date", "ip_address", "access_point")
+# MAGIC #         )
+# MAGIC
+# MAGIC #         df_resent = df_delivery.sample(fraction=resend_rate, seed=seed + delivery)
+# MAGIC
+# MAGIC #         (df_delivery.unionByName(df_resent)
+# MAGIC #             .repartition(1)
+# MAGIC #             .sortWithinPartitions("access_date")
+# MAGIC #             .write
+# MAGIC #             .mode("append")
+# MAGIC #             .json(output_path))
+# MAGIC
+# MAGIC #     df_files = spark.read.schema("access_date TIMESTAMP, ip_address STRING, access_point STRING").json(output_path)
 # MAGIC
 # MAGIC def generate_and_write_to_volume(
 # MAGIC     chapter_number: str,
@@ -36,6 +83,8 @@
 # MAGIC
 # MAGIC     drop_volume(chapter_number)
 # MAGIC     create_volume(chapter_number)
+# MAGIC
+# MAGIC     # generate_ip_access_files()
 # MAGIC
 # MAGIC     target_files = max(50, min(120, target_files))
 # MAGIC
@@ -687,35 +736,18 @@ spark.sql("USE SCHEMA default")
 # COMMAND ----------
 
 def cleanup_all_resources():
-    """
-    Cleanup all resources created by this notebook:
-    - Stop all active streams
-    - Drop volume chapter_08
-    - Drop all tables (users, orders, order_details, products, tb_api_stream_data)
-    """
     # Stop all active streaming queries
     for stream in spark.streams.active:
         print(f"Stopping stream: {stream.name if stream.name else stream.id}")
         stream.stop()
     
     # Drop volume
-    print("Dropping volume: workspace.default.chapter_08")
-    spark.sql("DROP VOLUME IF EXISTS workspace.default.chapter_08")
-
-    # Drop function 
-    print("Dropping function: workspace.default.calculate_discount")
-    spark.sql("DROP FUNCTION IF EXISTS calculate_discount")
+    print("Dropping volume: workspace.default.chapter_09")
+    spark.sql("DROP VOLUME IF EXISTS workspace.default.chapter_09")
     
     # Drop all tables
     tables = [
-        "workspace.default.tb_api_stream_data",
-        "workspace.default.tb_api_stream_sample",
-        "workspace.default.tb_ip_address",
-        "workspace.default.tb_ip_address_append",
-        "workspace.default.users",
-        "workspace.default.orders",
-        "workspace.default.order_details",
-        "workspace.default.products"
+        ""
     ]
     
     for table in tables:
@@ -723,232 +755,3 @@ def cleanup_all_resources():
         spark.sql(f"DROP TABLE IF EXISTS {table}")
     
     print("\nAll resources cleaned up successfully!")
-
-# COMMAND ----------
-
-def generate_ip_access_files(
-    chapter_number: str = "09",
-    deliveries: int = 10,
-    rows_per_delivery: int = 1000,
-    distinct_ips: int = 2000,
-    resend_rate: float = 0.1,
-    seed: int = 42,
-    ):
-    """
-    Writes one JSON file per delivery into chapter_<n>/ip_access_data, with
-    duplicated ip_address values on purpose:
-    - inside a delivery: a fraction of the rows (resend_rate) is sent twice,
-      and the same address can be drawn more than once;
-    - across deliveries: every delivery draws from the same pool of
-      distinct_ips addresses, so the same ip_address returns in later files.
-    Each file becomes one micro-batch when read with maxFilesPerTrigger = 1.
-    """
-    from pyspark.sql import functions as F
-    from datetime import datetime, timezone
-
-    create_volume(chapter_number)
-    output_path = f"/Volumes/workspace/default/chapter_{chapter_number}/ip_access_data"
-    dbutils.fs.rm(output_path, True)
-
-    access_points = ['iphone','android','chrome','safari','firefox','unknown']
-    access_point_array = F.array(*[F.lit(a) for a in access_points])
-    base_epoch = int(datetime(2026, 7, 1, tzinfo=timezone.utc).timestamp())
-
-    def _octet(n: int):
-        return F.pmod(F.xxhash64(F.col("ip_id"), F.lit(seed + n)), F.lit(254)) + 1
-
-    for delivery in range(deliveries):
-        df_delivery = (
-            spark.range(rows_per_delivery)
-                .withColumn("ip_id", F.pmod(F.xxhash64("id", F.lit(delivery), F.lit(seed)), F.lit(distinct_ips)))
-                .withColumn("ip_address", F.format_string("%d.%d.%d.%d", _octet(1), _octet(2), _octet(3), _octet(4)))
-                .withColumn(
-                    "access_date",
-                    F.timestamp_seconds(
-                        F.lit(base_epoch + delivery * 3600)
-                        + F.pmod(F.xxhash64("id", F.lit(delivery), F.lit(seed + 10)), F.lit(3600))
-                    )
-                )
-                .withColumn(
-                    "access_point",
-                    F.element_at(
-                        access_point_array,
-                        (F.pmod(F.xxhash64("id", F.lit(delivery), F.lit(seed + 20)), F.lit(len(access_points))) + 1).cast("int")
-                    )
-                )
-                .select("access_date", "ip_address", "access_point")
-        )
-
-        df_resent = df_delivery.sample(fraction=resend_rate, seed=seed + delivery)
-
-        (df_delivery.unionByName(df_resent)
-            .repartition(1)
-            .sortWithinPartitions("access_date")
-            .write
-            .mode("append")
-            .json(output_path))
-
-    df_files = spark.read.schema("access_date TIMESTAMP, ip_address STRING, access_point STRING").json(output_path)
-    print(f"Files written:         {deliveries}")
-    print(f"Rows in the files:     {df_files.count()}")
-    print(f"Distinct ip_address:   {df_files.select('ip_address').distinct().count()}")
-
-    return output_path
-
-# COMMAND ----------
-
-from pyspark.sql.functions import *
-
-dbutils.fs.rm("/Volumes/workspace/default/chapter_09/_checkpoint/test",True)
-
-def get_ip_timestamp_stream(
-    source_path: str,
-    target_table: str = "workspace.default.tb_ip_timestamp"
-  ):
-  from pyspark.sql import functions as F
-
-  spark.sql(f"""
-        DROP TABLE IF EXISTS {target_table}
-    """)
-  spark.sql(f"""
-        CREATE TABLE IF NOT EXISTS {target_table} (
-            ip_address STRING
-        )
-        USING DELTA
-    """)
-
-  stream_df = (
-        spark.readStream
-            .format("json")
-            .schema("ip_address STRING, access_date TIMESTAMP")
-            .load(source_path)
-            .select("ip_address", "access_date")
-            .dropDuplicates(["ip_address","access_date"])
-    )
-
-def upsert_to_delta(micro_batch_df, batch_id):
-        
-        micro_batch_df.createOrReplaceTempView("_ip_ts_updates")
-
-        spark.sql(f"""
-            MERGE INTO {target_table} AS t
-            USING _ip_ts_updates AS s
-                ON t.ip_address = s.ip_address
-                    WHEN NOT MATCHED THEN INSERT *
-                    WHEN MATCHED THEN UPDATE SET *
-        """)
-
-        query = (
-                stream_df.select(col("ip_address"))
-                    .writeStream
-                    .foreachBatch(upsert_to_delta)
-                    .outputMode("append")
-                    .queryName("ip_dedup_by_batch")
-                    .trigger(availableNow=True)
-                    .option('checkpointLocation', "/Volumes/workspace/default/chapter_09/_checkpoint/test")
-                    .toTable(target_table)
-            )
-
-        print(f"Stream started: {query.name}")
-        return query
-
-# Define the source path (same as generated by generate_and_write_to_volume)
-_source_path = "/Volumes/workspace/default/chapter_09/api_stream_data"
-
-# Start the streaming merge
-stream_query = get_ip_timestamp_stream(_source_path)
-
-spark.sql(f"""
-SELECT ip_address,
-      COUNT(*)
-FROM workspace.default.tb_ip_timestamp
-GROUP BY ip_address
-HAVING count(*) > 1
-""").display()
-
-# COMMAND ----------
-
-from pyspark.sql.functions import *
-
-dbutils.fs.rm("/Volumes/workspace/default/chapter_09/_checkpoint/test",True)
-
-def get_ip_timestamp_stream(
-    source_path: str,
-    target_table: str = "workspace.default.tb_ip_timestamp"
-  ):
-  from pyspark.sql import functions as F
-
-  spark.sql(f"""
-        DROP TABLE IF EXISTS {target_table}
-    """)
-  spark.sql(f"""
-        CREATE TABLE IF NOT EXISTS {target_table} (
-            ip_address STRING
-        )
-        USING DELTA
-    """)
-
-  stream_df = (
-        spark
-            .readStream
-            .option("maxFilesPerTrigger", 10)
-            .format("json")
-            .schema("ip_address STRING, access_date TIMESTAMP")
-            .load(source_path)
-            .select("ip_address", "access_date")
-            .withWatermark("access_date", "1 second")
-            .dropDuplicates(["ip_address"])
-    )
-
-  query = (
-        stream_df.select(col("ip_address"))
-            .writeStream
-            # .foreachBatch(upsert_to_delta)
-            .outputMode("append")
-            .queryName("ip_dedup_by_batch")
-            .trigger(availableNow=True)
-            .option('checkpointLocation', "/Volumes/workspace/default/chapter_09/_checkpoint/test")
-            .toTable(target_table)
-    )
-
-  print(f"Stream started: {query.name}")
-  return query
-
-# Define the source path (same as generated by generate_and_write_to_volume)
-_source_path = "/Volumes/workspace/default/chapter_09/api_stream_data"
-
-# Start the streaming merge
-stream_query = get_ip_timestamp_stream(_source_path)
-
-# COMMAND ----------
-
-# MAGIC %sql
-# MAGIC SELECT 
-# MAGIC   ip_address,
-# MAGIC   count(*)
-# MAGIC FROM workspace.default.tb_ip_timestamp
-# MAGIC GROUP BY ip_address
-# MAGIC HAVING count(*) > 1
-
-# COMMAND ----------
-
-df = spark.read.json("/Volumes/workspace/default/chapter_09/api_stream_data")
-df.createOrReplaceTempView("test")
-
-# COMMAND ----------
-
-# MAGIC %sql 
-# MAGIC SELECT 
-# MAGIC   ip_address,
-# MAGIC   count(*)
-# MAGIC FROM test
-# MAGIC GROUP BY ip_address
-# MAGIC HAVING count(ip_address) > 1
-# MAGIC -- order by ip_address, access_date
-# MAGIC
-# MAGIC
-# MAGIC
-
-# COMMAND ----------
-
-# MAGIC %sql SELECT cast(access_date AS TIMESTAMP) FROM test WHERE ip_address = "200.112.223.175"
