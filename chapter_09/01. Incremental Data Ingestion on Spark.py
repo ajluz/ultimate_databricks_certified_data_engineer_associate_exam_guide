@@ -16,6 +16,10 @@ generate_and_write_to_volume("09")
 
 # COMMAND ----------
 
+# MAGIC %md ### Insert-Only MERGE with Duplicated IP Addresses
+
+# COMMAND ----------
+
 stream_path = "/Volumes/workspace/default/chapter_09/ip_access_data/"
 
 schema = spark.read.json(stream_path).schema
@@ -35,12 +39,12 @@ spark.read.json("/Volumes/workspace/default/chapter_09/ip_access_data/").createO
 spark.sql("""
   SELECT
     ip_address,
-    COUNT(*) AS qty_duplicated_ipd
+    COUNT(*) AS qty_duplicated_ips
   FROM ips
   GROUP BY ip_address
   HAVING COUNT(*) > 1
-  ORDER BY qty_duplicated_ipd DESC
-""").show(10)
+  ORDER BY qty_duplicated_ips DESC
+""").show(5)
 
 # COMMAND ----------
 
@@ -69,55 +73,74 @@ deduplication_at_read = (
 spark.sql("""
   SELECT
     ip_address,
-    COUNT(*) AS qty_duplicated_ipd
+    COUNT(*) AS qty_duplicated_ips
   FROM drop_duplicates_on_read
   GROUP BY ip_address
   HAVING COUNT(*) > 1
-  ORDER BY qty_duplicated_ipd
-""").show(10)
+  ORDER BY qty_duplicated_ips
+""").show(5)
 
 # COMMAND ----------
 
-from pyspark.sql.functions import col, sha2
-
-def upsert_users(df_batch, batch_id):
-
-	  df_users = (
-	    df_batch
-	      .where("payload.user_info IS NOT NULL")
-	      .select(
-	        col("payload.user_info.user_name").alias("user_name"),
-	        col("payload.user_info.user_email").alias("user_email"),
-	        col("payload.user_info.user_company").alias("user_company")
-	      )
-	      .withColumn("user_uuid", sha2(col("user_email"), 256))
-	      .dropDuplicates(["user_uuid"])
+spark.sql("""
+	  CREATE OR REPLACE TABLE tb_ip_address (
+	    ip_address STRING,
+	    access_date TIMESTAMP,
+	    access_point STRING,
+	    load_date TIMESTAMP
 	  )
-
-	  df_users.createOrReplaceTempView("user_updates")
-
-	  df_batch.sparkSession.sql("""
-	    MERGE INTO user_tb AS target
-	    USING user_updates AS source
-	    ON target.user_uuid = source.user_uuid
-	    WHEN MATCHED THEN
-	      UPDATE SET
-	        target.user_name = source.user_name,
-	        target.user_company = source.user_company,
-	        target.load_date = current_timestamp()
-	    WHEN NOT MATCHED THEN
-	      INSERT (user_uuid, user_name, user_email, user_company, source, load_date)
-	      VALUES (source.user_uuid, source.user_name, source.user_email,
-	              source.user_company, 'API', current_timestamp())
-	  """)
+	""")
 
 # COMMAND ----------
 
-# MAGIC %sql SELECT COUNT(*) FROM users
+from pyspark.sql.functions import col
+
+def insert_new_ips(df_batch, batch_id):
+  df_batch.createOrReplaceTempView("ip_updates")
+
+  spark.sql("""
+	  MERGE INTO tb_ip_address AS target
+	  USING ip_updates AS source
+	  ON target.ip_address = source.ip_address
+	  WHEN NOT MATCHED THEN
+	  INSERT (ip_address, access_date, access_point, load_date)
+	  VALUES (source.ip_address, source.access_date, source.access_point, current_timestamp())
+  """)
 
 # COMMAND ----------
 
-# MAGIC %md ### Insert-Only MERGE with Duplicated IP Addresses
+dbutils.fs.rm("/Volumes/workspace/default/chapter_09/ip_access_data/_checkpoint/example_stream_deduplication_2",True)
+
+from pyspark.sql.functions import window, col, date_format
+
+checkpointLocation = "/Volumes/workspace/default/chapter_09/ip_access_data/_checkpoint/example_stream_deduplication_2"
+
+deduplication_at_read = (
+  df_stream_ips
+    .withColumn("access_date", col("access_date").cast("timestamp"))
+    .withWatermark("access_date", "10 seconds")
+    .dropDuplicatesWithinWatermark(["ip_address"])
+    .writeStream
+    .format("memory")
+    .foreachBatch(insert_new_ips)
+    .option("checkpointLocation",checkpointLocation)
+    .trigger(availableNow=True)
+    .outputMode("append")
+    .queryName("drop_duplicates_on_read")
+    .start()
+)
+
+# COMMAND ----------
+
+spark.sql("""
+  SELECT
+    ip_address,
+    COUNT(*) AS qty_duplicated_ips
+  FROM tb_ip_address
+  GROUP BY ip_address
+  HAVING COUNT(*) > 1
+  ORDER BY qty_duplicated_ips
+""").show(5)
 
 # COMMAND ----------
 
