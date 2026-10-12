@@ -44,27 +44,25 @@
 # MAGIC     dict_fields = []
 # MAGIC     first_delivery = 0
 # MAGIC
-# MAGIC     if type_of_column is None:
-# MAGIC         dbutils.fs.rm(output_path, True)
-# MAGIC     else:
-# MAGIC         # Keep the files already delivered and carry forward the columns added by previous calls
-# MAGIC         try:
-# MAGIC             json_files = [f for f in dbutils.fs.ls(output_path) if f.name.endswith(".json")]
-# MAGIC         except Exception:
-# MAGIC             json_files = []
+# MAGIC     # Keep the files already delivered and carry forward the columns added by previous calls
+# MAGIC     try:
+# MAGIC         json_files = [f for f in dbutils.fs.ls(output_path) if f.name.endswith(".json")]
+# MAGIC     except Exception:
+# MAGIC         json_files = []
 # MAGIC
-# MAGIC         if json_files:
-# MAGIC             latest_file = builtins.max(json_files, key=lambda f: f.modificationTime)
-# MAGIC             with open(f"{output_path}/{latest_file.name}") as f:
-# MAGIC                 last_row = json.loads(f.readline())
-# MAGIC             extra_columns = [c for c in last_row if c not in base_columns]
-# MAGIC             dict_fields = list(last_row.get("col_dict", {}))
-# MAGIC             first_delivery = len(json_files)
+# MAGIC     if json_files:
+# MAGIC         latest_file = builtins.max(json_files, key=lambda f: f.modificationTime)
+# MAGIC         with open(f"{output_path}/{latest_file.name}") as f:
+# MAGIC             last_row = json.loads(f.readline())
+# MAGIC         extra_columns = [c for c in last_row if c not in base_columns]
+# MAGIC         dict_fields = list(last_row.get("col_dict", {}))
+# MAGIC         first_delivery = len(json_files)
 # MAGIC
-# MAGIC         if new_columns[type_of_column] not in extra_columns:
-# MAGIC             extra_columns.append(new_columns[type_of_column])
-# MAGIC         if type_of_column == "dict":
-# MAGIC             dict_fields = base_columns + [c for c in extra_columns if c != "col_dict"]
+# MAGIC     # With no type_of_column, no new column is added
+# MAGIC     if type_of_column is not None and new_columns[type_of_column] not in extra_columns:
+# MAGIC         extra_columns.append(new_columns[type_of_column])
+# MAGIC     if type_of_column == "dict":
+# MAGIC         dict_fields = base_columns + [c for c in extra_columns if c != "col_dict"]
 # MAGIC
 # MAGIC     access_points = ['iphone','android','chrome','safari','firefox','unknown']
 # MAGIC     access_point_array = F.array(*[F.lit(a) for a in access_points])
