@@ -492,16 +492,16 @@ spark.sql("""
     (3, 'Carla', 'Braga')
 	""")
 
-# spark.sql("""
-# 	UPDATE tb_customers
-# 	SET customer_city = 'Faro'
-# 	WHERE customer_id = 2
-# """)
+spark.sql("""
+	UPDATE tb_customers
+	SET customer_city = 'Faro'
+	WHERE customer_id = 2
+""")
 
-# spark.sql("""
-#   DELETE FROM tb_customers
-# 	WHERE customer_id = 3
-# """)
+spark.sql("""
+  DELETE FROM tb_customers
+	WHERE customer_id = 3
+""")
 
 # COMMAND ----------
 
