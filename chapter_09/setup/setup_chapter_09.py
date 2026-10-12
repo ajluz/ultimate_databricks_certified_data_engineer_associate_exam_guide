@@ -10,6 +10,7 @@
 # MAGIC from pyspark.sql.window import Window
 # MAGIC from pyspark.sql.types import *
 # MAGIC import os
+# MAGIC import json
 # MAGIC import builtins
 # MAGIC import decimal
 # MAGIC from datetime import datetime, timezone
@@ -30,10 +31,40 @@
 # MAGIC     distinct_ips: int = 2000,
 # MAGIC     resend_rate: float = 0.1,
 # MAGIC     seed: int = 42,
+# MAGIC     type_of_column: str = None,
 # MAGIC     ):
-# MAGIC     
+# MAGIC
+# MAGIC     new_columns = {"string": "col_string", "numeric": "col_int", "dict": "col_dict"}
+# MAGIC     if type_of_column is not None and type_of_column not in new_columns:
+# MAGIC         raise ValueError(f"type_of_column must be one of {list(new_columns)} or None, got {type_of_column!r}")
+# MAGIC
 # MAGIC     output_path = f"/Volumes/workspace/default/chapter_{chapter_number}/ip_access_data"
-# MAGIC     dbutils.fs.rm(output_path, True)
+# MAGIC     base_columns = ["access_date", "ip_address", "access_point"]
+# MAGIC     extra_columns = []
+# MAGIC     dict_fields = []
+# MAGIC     first_delivery = 0
+# MAGIC
+# MAGIC     if type_of_column is None:
+# MAGIC         dbutils.fs.rm(output_path, True)
+# MAGIC     else:
+# MAGIC         # Keep the files already delivered and carry forward the columns added by previous calls
+# MAGIC         try:
+# MAGIC             json_files = [f for f in dbutils.fs.ls(output_path) if f.name.endswith(".json")]
+# MAGIC         except Exception:
+# MAGIC             json_files = []
+# MAGIC
+# MAGIC         if json_files:
+# MAGIC             latest_file = builtins.max(json_files, key=lambda f: f.modificationTime)
+# MAGIC             with open(f"{output_path}/{latest_file.name}") as f:
+# MAGIC                 last_row = json.loads(f.readline())
+# MAGIC             extra_columns = [c for c in last_row if c not in base_columns]
+# MAGIC             dict_fields = list(last_row.get("col_dict", {}))
+# MAGIC             first_delivery = len(json_files)
+# MAGIC
+# MAGIC         if new_columns[type_of_column] not in extra_columns:
+# MAGIC             extra_columns.append(new_columns[type_of_column])
+# MAGIC         if type_of_column == "dict":
+# MAGIC             dict_fields = base_columns + [c for c in extra_columns if c != "col_dict"]
 # MAGIC
 # MAGIC     access_points = ['iphone','android','chrome','safari','firefox','unknown']
 # MAGIC     access_point_array = F.array(*[F.lit(a) for a in access_points])
@@ -42,7 +73,7 @@
 # MAGIC     def _octet(n: int):
 # MAGIC         return F.pmod(F.xxhash64(F.col("ip_id"), F.lit(seed + n)), F.lit(254)) + 1
 # MAGIC
-# MAGIC     for delivery in range(deliveries):
+# MAGIC     for delivery in range(first_delivery, first_delivery + deliveries):
 # MAGIC         df_delivery = (
 # MAGIC             spark.range(rows_per_delivery)
 # MAGIC                 .withColumn("ip_id", F.pmod(F.xxhash64("id", F.lit(delivery), F.lit(seed)), F.lit(distinct_ips)))
@@ -61,8 +92,16 @@
 # MAGIC                         (F.pmod(F.xxhash64("id", F.lit(delivery), F.lit(seed + 20)), F.lit(len(access_points))) + 1).cast("int")
 # MAGIC                     )
 # MAGIC                 )
-# MAGIC                 .select("access_date", "ip_address", "access_point")
+# MAGIC                 .select(*base_columns)
 # MAGIC         )
+# MAGIC
+# MAGIC         if "col_string" in extra_columns:
+# MAGIC             df_delivery = df_delivery.withColumn("col_string", F.lit("new_col_value"))
+# MAGIC         if "col_int" in extra_columns:
+# MAGIC             df_delivery = df_delivery.withColumn("col_int", F.lit(1))
+# MAGIC         if "col_dict" in extra_columns:
+# MAGIC             df_delivery = df_delivery.withColumn("col_dict", F.struct(*dict_fields))
+# MAGIC         df_delivery = df_delivery.select(*base_columns, *extra_columns)
 # MAGIC
 # MAGIC         df_resent = df_delivery.sample(fraction=resend_rate, seed=seed + delivery)
 # MAGIC
