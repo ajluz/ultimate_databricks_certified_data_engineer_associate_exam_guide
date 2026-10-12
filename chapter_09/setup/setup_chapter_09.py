@@ -14,6 +14,7 @@
 # MAGIC import builtins
 # MAGIC import decimal
 # MAGIC from datetime import datetime, timezone
+# MAGIC from typing import Optional
 # MAGIC
 # MAGIC def drop_volume(chapter_number: str):
 # MAGIC     spark.sql(f"drop volume if exists workspace.default.chapter_{chapter_number}")
@@ -31,7 +32,7 @@
 # MAGIC     distinct_ips: int = 2000,
 # MAGIC     resend_rate: float = 0.1,
 # MAGIC     seed: int = 42,
-# MAGIC     type_of_column: str = None,
+# MAGIC     type_of_column: Optional[str] = None,
 # MAGIC     ):
 # MAGIC
 # MAGIC     new_columns = {"string": "col_string", "numeric": "col_int", "dict": "col_dict"}
