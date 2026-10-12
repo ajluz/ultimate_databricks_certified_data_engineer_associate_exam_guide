@@ -125,7 +125,7 @@
 # MAGIC     drop_volume(chapter_number)
 # MAGIC     create_volume(chapter_number)
 # MAGIC
-# MAGIC     generate_ip_access_files(chapter_number)
+# MAGIC     generate_ip_access_files(chapter_number, type_of_column=None)
 # MAGIC
 # MAGIC     target_files = builtins.max(50, builtins.min(120, target_files))
 # MAGIC
@@ -497,16 +497,6 @@
 # MAGIC
 # MAGIC     return output_path
 # MAGIC
-# MAGIC def drop_tables():
-# MAGIC     tables = [
-# MAGIC         "workspace.default.users",
-# MAGIC         "workspace.default.orders",
-# MAGIC         "workspace.default.order_details",
-# MAGIC         "workspace.default.products"
-# MAGIC     ]
-# MAGIC     for table in tables:
-# MAGIC         spark.sql(f"DROP TABLE IF EXISTS {table}")
-# MAGIC
 # MAGIC def copy_file_workspace_to_volume(source_path: str, target_path: str):
 # MAGIC     import os
 # MAGIC     try:
@@ -781,18 +771,21 @@ def cleanup_all_resources():
     for stream in spark.streams.active:
         print(f"Stopping stream: {stream.name if stream.name else stream.id}")
         stream.stop()
-    
+
     # Drop volume
     print("Dropping volume: workspace.default.chapter_09")
     spark.sql("DROP VOLUME IF EXISTS workspace.default.chapter_09")
-    
+
     # Drop all tables
     tables = [
-        ""
+        "tb_api_data_autoloader",
+        "tb_api_data_copy",
+        "tb_api_stream_data",
+        "tb_ip_address"
     ]
-    
+
     for table in tables:
         print(f"Dropping table: {table}")
         spark.sql(f"DROP TABLE IF EXISTS {table}")
-    
+
     print("\nAll resources cleaned up successfully!")

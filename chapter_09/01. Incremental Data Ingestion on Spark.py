@@ -210,12 +210,12 @@ spark.sql("""
 
 # COMMAND ----------
 
-dbutils.fs.rm("/Volumes/workspace/default/chapter_09/_schema/tb_api_data_autoloader", True)
-dbutils.fs.rm("/Volumes/workspace/default/chapter_09/_checkpoint/tb_api_data_autoloader", True)
+# dbutils.fs.rm("/Volumes/workspace/default/chapter_09/_schema/tb_api_data_autoloader", True)
+# dbutils.fs.rm("/Volumes/workspace/default/chapter_09/_checkpoint/tb_api_data_autoloader", True)
 
-spark.sql("""
-  DROP TABLE IF EXISTS tb_api_data_autoloader
-""")
+# spark.sql("""
+#   DROP TABLE IF EXISTS tb_api_data_autoloader
+# """)
 
 checkpointLocation = "/Volumes/workspace/default/chapter_09/_checkpoint/tb_api_data_autoloader"
 schemaLocation = "/Volumes/workspace/default/chapter_09/_schema/tb_api_data_autoloader"
@@ -227,7 +227,7 @@ autoloader_df = (
        .format("cloudFiles")
        .option("cloudFiles.format", "json")
        .option("cloudFiles.schemaLocation", schemaLocation)
-       .option("cloudFiles.schemaEvolutionMode", "addNewColumns")
+       .option("cloudFiles.schemaEvolutionMode", "none")
        .option("cloudFiles.inferColumnTypes", True)
        .load(stream_path)
        .writeStream
@@ -242,17 +242,14 @@ spark.sql("""
 
 # COMMAND ----------
 
+df = spark.createDataFrame(dbutils.fs.ls(f"{schemaLocation}/_schemas/"))
+df.select("path").show(truncate=False)
+
+# COMMAND ----------
+
 import json
 from pyspark.sql.functions import col, replace
 from pyspark.sql.types import StructType
-
-version = (
-    spark.read.text(f"{schemaLocation}/_schemas/0")
-              .filter(col("value") == "v1")
-              .collect()[0]["value"]
-)
-
-print(f"version of the schema:", version)
 
 schemas_text = (
     spark.read.text(f"{schemaLocation}/_schemas/0")
@@ -266,27 +263,58 @@ schema = StructType.fromJson(
     json.loads(schemas_json["dataSchemaJson"])
 )
 
-print(f"\nActual schema for v1: {schema}")
+print(schema)
 
 # COMMAND ----------
 
-generate_ip_access_files("09")
+generate_ip_access_files("09", type_of_column='string')
 
 # COMMAND ----------
 
-from pyspark.sql.functions import lit
+(spark.read.json(stream_path)).show(5)
 
-# dbutils.fs.rm("/Volumes/workspace/default/chapter_09/_schema/tb_api_data_autoloader", True)
-# dbutils.fs.rm("/Volumes/workspace/default/chapter_09/_checkpoint/tb_api_data_autoloader", True)
+# COMMAND ----------
 
-# spark.sql("""
-#   DROP TABLE IF EXISTS tb_api_data_autoloader
-# """)
+autoloader_df = (
+  spark.readStream
+       .format("cloudFiles")
+       .option("cloudFiles.format", "json")
+       .option("cloudFiles.schemaLocation", schemaLocation)
+       .option("cloudFiles.schemaEvolutionMode", "none")
+       .option("cloudFiles.inferColumnTypes", True)
+       .load(stream_path)
+       .writeStream
+       .option("checkpointLocation", checkpointLocation)
+       .trigger(availableNow=True)
+       .toTable("tb_api_data_autoloader")
+).awaitTermination()
 
-# checkpointLocation = "/Volumes/workspace/default/chapter_09/_checkpoint/tb_api_data_autoloader"
-# schemaLocation = "/Volumes/workspace/default/chapter_09/_schema/tb_api_data_autoloader"
+spark.sql("""
+  SELECT * FROM tb_api_data_autoloader
+""").show(5)
 
-# stream_path = "/Volumes/workspace/default/chapter_09/ip_access_data/"
+# COMMAND ----------
+
+generate_ip_access_files("09", type_of_column='string')
+
+# COMMAND ----------
+
+autoloader_df = (
+  spark.readStream
+       .format("cloudFiles")
+       .option("cloudFiles.format", "json")
+       .option("cloudFiles.schemaLocation", schemaLocation)
+       .option("cloudFiles.schemaEvolutionMode", "failOnNewColumns")
+       .option("cloudFiles.inferColumnTypes", True)
+       .load(stream_path)
+       .writeStream
+       .option("checkpointLocation", checkpointLocation)
+       .option("mergeSchema", "true")
+       .trigger(availableNow=True)
+       .toTable("tb_api_data_autoloader")
+).awaitTermination()
+
+# COMMAND ----------
 
 autoloader_df = (
   spark.readStream
@@ -296,22 +324,234 @@ autoloader_df = (
        .option("cloudFiles.schemaEvolutionMode", "rescue")
        .option("cloudFiles.inferColumnTypes", True)
        .load(stream_path)
-)
-
-(
-  autoloader_df.writeStream
-               .option("checkpointLocation", checkpointLocation)
-               .trigger(availableNow=True)
-               .toTable("tb_api_data_autoloader")
+       .writeStream
+       .option("checkpointLocation", checkpointLocation)
+       .trigger(availableNow=True)
+       .option("mergeSchema", "true")
+       .toTable("tb_api_data_autoloader")
 ).awaitTermination()
 
 spark.sql("""
-  SELECT * FROM tb_api_data_autoloader
-""").show(5)
+  SELECT t1.ip_address, t1._rescued_data
+  FROM tb_api_data_autoloader AS t1
+  WHERE t1._rescued_data IS NOT NULL
+""").show(5, False)
 
 # COMMAND ----------
 
+generate_ip_access_files("09", type_of_column='string')
 
+# COMMAND ----------
+
+autoloader_df = (
+  spark.readStream
+       .format("cloudFiles")
+       .option("cloudFiles.format", "json")
+       .option("cloudFiles.schemaLocation", schemaLocation)
+       .option("cloudFiles.schemaEvolutionMode", "addNewColumns")
+       .option("cloudFiles.inferColumnTypes", True)
+       .load(stream_path)
+       .writeStream
+       .option("checkpointLocation", checkpointLocation)
+       .trigger(availableNow=True)
+       .option("mergeSchema", "true")
+       .toTable("tb_api_data_autoloader")
+).awaitTermination()
+
+# COMMAND ----------
+
+df = spark.createDataFrame(dbutils.fs.ls(f"{schemaLocation}/_schemas/"))
+df.select("path").show(truncate=False)
+
+# COMMAND ----------
+
+schemas_text = (
+    spark.read.text(f"{schemaLocation}/_schemas/1")
+              .filter(col("value")!= "v1")
+              .collect()[0]["value"]
+)
+
+schemas_json = json.loads(schemas_text)
+
+schema = StructType.fromJson(
+    json.loads(schemas_json["dataSchemaJson"])
+)
+
+print(schema)
+
+# COMMAND ----------
+
+autoloader_df = (
+  spark.readStream
+       .format("cloudFiles")
+       .option("cloudFiles.format", "json")
+       .option("cloudFiles.schemaLocation", schemaLocation)
+       .option("cloudFiles.schemaEvolutionMode", "addNewColumns")
+       .option("cloudFiles.inferColumnTypes", True)
+       .load(stream_path)
+       .writeStream
+       .option("checkpointLocation", checkpointLocation)
+       .trigger(availableNow=True)
+       .option("mergeSchema", "true")
+       .toTable("tb_api_data_autoloader")
+).awaitTermination()
+
+spark.sql("""
+  SELECT * FROM tb_api_data_autoloader AS t1
+  WHERE t1.col_string IS NOT NULL
+""").show(5, False)
+
+# COMMAND ----------
+
+generate_ip_access_files("09", type_of_column='dict')
+
+# COMMAND ----------
+
+autoloader_df = (
+  spark.readStream
+       .format("cloudFiles")
+       .option("cloudFiles.format", "json")
+       .option("cloudFiles.schemaLocation", schemaLocation)
+       .option("cloudFiles.schemaEvolutionMode", "addNewColumns")
+       .option("cloudFiles.inferColumnTypes", True)
+       .load(stream_path)
+       .writeStream
+       .option("checkpointLocation", checkpointLocation)
+       .trigger(availableNow=True)
+       .option("mergeSchema", "true")
+       .toTable("tb_api_data_autoloader")
+).awaitTermination()
+
+# COMMAND ----------
+
+df = spark.createDataFrame(dbutils.fs.ls(f"{schemaLocation}/_schemas/"))
+df.select("path").show(truncate=False)
+
+schemas_text = (
+    spark.read.text(f"{schemaLocation}/_schemas/2")
+              .filter(col("value")!= "v1")
+              .collect()[0]["value"]
+)
+
+schemas_json = json.loads(schemas_text)
+
+schema = StructType.fromJson(
+    json.loads(schemas_json["dataSchemaJson"])
+)
+
+print(schema)
+
+# COMMAND ----------
+
+autoloader_df = (
+  spark.readStream
+       .format("cloudFiles")
+       .option("cloudFiles.format", "json")
+       .option("cloudFiles.schemaLocation", schemaLocation)
+       .option("cloudFiles.schemaEvolutionMode", "addNewColumns")
+       .option("cloudFiles.inferColumnTypes", True)
+       .load(stream_path)
+       .writeStream
+       .option("checkpointLocation", checkpointLocation)
+       .trigger(availableNow=True)
+       .option("mergeSchema", "true")
+       .toTable("tb_api_data_autoloader")
+).awaitTermination()
+
+spark.sql("""
+  SELECT t1.ip_address, t1.col_dict
+  FROM tb_api_data_autoloader AS t1
+  WHERE t1.col_dict IS NOT NULL
+""").show(5, False)
+
+# COMMAND ----------
+
+# MAGIC %md ### Change Data Feed and CDC Patterns
+
+# COMMAND ----------
+
+spark.sql("""
+	DROP TABLE IF EXISTS tb_customers
+""")
+
+spark.sql("""
+	CREATE TABLE tb_customers (
+    customer_id INT,
+    customer_name STRING,
+    customer_city STRING
+	)
+	TBLPROPERTIES (delta.enableChangeDataFeed = true)
+""")
+
+# COMMAND ----------
+
+spark.sql("""
+	INSERT INTO tb_customers VALUES
+    (1, 'Ana', 'Lisbon'),
+    (2, 'Bruno', 'Porto'),
+    (3, 'Carla', 'Braga')
+	""")
+
+# spark.sql("""
+# 	UPDATE tb_customers
+# 	SET customer_city = 'Faro'
+# 	WHERE customer_id = 2
+# """)
+
+# spark.sql("""
+#   DELETE FROM tb_customers
+# 	WHERE customer_id = 3
+# """)
+
+# COMMAND ----------
+
+spark.sql("""
+  SELECT * FROM table_changes('tb_customers', 1)
+  ORDER BY _commit_version
+""").show()
+
+# COMMAND ----------
+
+df_changes = (
+  spark.read
+    .format("delta")
+    .option("readChangeFeed", "true")
+    .option("startingVersion", 1)
+    .table("tb_customers")
+)
+
+df_changes.orderBy("_commit_version").show()
+
+# COMMAND ----------
+
+df_stream_changes = (
+  spark.readStream
+       .option("readChangeFeed", "true")
+       .table("tb_customers")
+)
+
+# COMMAND ----------
+
+# dbutils.fs.rm("/Volumes/workspace/default/chapter_09/cdf/_checkpoint/example_1",True)
+
+checkpointLocation = "/Volumes/workspace/default/chapter_09/cdf/_checkpoint/example_1"
+
+df_stream_changes = (
+  spark.readStream
+    .option("readChangeFeed", "true")
+    .table("tb_customers")
+    .writeStream
+    .format("memory")
+    .option("checkpointLocation",checkpointLocation)
+    .trigger(availableNow=True)
+    .outputMode("append")
+    .queryName("cdf_example")
+    .start()
+)
+
+# COMMAND ----------
+
+spark.sql("SELECT * FROM cdf_example").show()
 
 # COMMAND ----------
 
