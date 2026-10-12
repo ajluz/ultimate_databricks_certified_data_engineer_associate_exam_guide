@@ -532,27 +532,4 @@ df_stream_changes = (
 
 # COMMAND ----------
 
-# dbutils.fs.rm("/Volumes/workspace/default/chapter_09/cdf/_checkpoint/example_1",True)
-
-checkpointLocation = "/Volumes/workspace/default/chapter_09/cdf/_checkpoint/example_1"
-
-df_stream_changes = (
-  spark.readStream
-    .option("readChangeFeed", "true")
-    .table("tb_customers")
-    .writeStream
-    .format("memory")
-    .option("checkpointLocation",checkpointLocation)
-    .trigger(availableNow=True)
-    .outputMode("append")
-    .queryName("cdf_example")
-    .start()
-)
-
-# COMMAND ----------
-
-spark.sql("SELECT * FROM cdf_example").show()
-
-# COMMAND ----------
-
 cleanup_all_resources()
